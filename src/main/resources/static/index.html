@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sri Raja Rajeshwari Finance</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="apple-touch-icon" href="img/app-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="login" class="hidden">
+    <form class="box" id="loginForm" autocomplete="off">
+      <img src="img/app-icon.png" alt="" class="login-logo">
+      <h1>SRI RAJA RAJESHWARI</h1>
+      <div class="sub">Finance management</div>
+      <div class="field"><label for="lgUser">User Id</label><input type="text" id="lgUser" required autofocus></div>
+      <div class="field"><label for="lgPass">Password</label><input type="password" id="lgPass" required></div>
+      <div class="field"><label for="lgRole">Role</label><select id="lgRole" required></select></div>
+      <div class="err" id="lgErr"></div>
+      <button class="btn" type="submit">Login Now</button>
+    </form>
+  </div>
+
+  <div id="app" class="hidden">
+    <header class="topbar">
+      <button id="menuBtn" aria-label="Menu">&#9776;</button>
+      <img src="img/app-icon.png" alt="" class="brand-logo"><span class="brand">SRI RAJA RAJESHWARI</span>
+      <span class="spacer"></span>
+      <span class="who" id="whoAmI"></span>
+      <button class="link" id="logoutBtn">Logout</button>
+    </header>
+    <div class="layout">
+      <nav id="nav"></nav>
+      <main id="main"></main>
+    </div>
+  </div>
+  <div id="toasts"></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/p-home.js"></script>
+  <script src="js/p-debtors.js"></script>
+  <script src="js/p-deposits.js"></script>
+  <script src="js/p-payments.js"></script>
+  <script src="js/p-reports.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
+

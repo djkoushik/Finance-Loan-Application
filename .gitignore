@@ -1,0 +1,27 @@
+# build output
+target/
+dist/
+*.zip
+
+# runtime data (database files, photos, backups) - contains customer information
+data/
+
+# exported legacy data - contains customer information
+migration/data/
+
+# logs
+*.log
+*.err
+
+# local-only helper copy of the icon used by the desktop shortcut
+finance-app-icon.ico
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+Thumbs.db
+.DS_Store
