@@ -111,13 +111,13 @@ function dropdownCard(g) {
 
   const body = h('tbody');
   g.items.forEach(function (it) {
-    const display = h('input', { type: 'text', maxlength: 100, value: it.display });
+    const display = g.nameOnly ? h('span', null, it.display) : h('input', { type: 'text', maxlength: 100, value: it.display });
     const active = g.supportsActive ? h('input', { type: 'checkbox', checked: it.active, disabled: it.locked }) : null;
     const save = h('button', { class: 'btn', type: 'button' }, 'Save');
     save.addEventListener('click', function () {
       call(save, function () {
         return PUT('/api/config/dropdowns/' + g.key, {
-          internal: it.internal, display: display.value.trim(), active: active ? active.checked : true
+          internal: it.internal, display: g.nameOnly ? it.display : display.value.trim(), active: active ? active.checked : true
         });
       }, 'Saved');
     });
@@ -127,17 +127,17 @@ function dropdownCard(g) {
       call(del, function () { return DEL('/api/config/dropdowns/' + g.key + '/' + encodeURIComponent(it.internal)); }, 'Deleted');
     });
     body.appendChild(h('tr', null,
-      h('td', null, h('code', null, it.internal)), h('td', null, display),
+      g.nameOnly ? h('td') : h('td', null, h('code', null, it.internal)), h('td', null, display),
       g.supportsActive ? h('td', { class: 'c' }, active) : null,
       h('td', { class: 'r' }, it.inUse), h('td', null, h('div', { class: 'actions' }, save, del))));
   });
 
-  const newInternal = h('input', { type: 'text', maxlength: 30, placeholder: g.numeric ? 'Auto' : 'Code (1 letter)' });
-  const newDisplay = h('input', { type: 'text', maxlength: 100, placeholder: 'Display value' });
+  const newInternal = g.nameOnly ? h('span') : h('input', { type: 'text', maxlength: 30, placeholder: g.numeric ? 'Auto' : 'Code (1 letter)' });
+  const newDisplay = h('input', { type: 'text', maxlength: 100, placeholder: g.nameOnly ? 'New area name' : 'Display value' });
   const add = h('button', { class: 'btn', type: 'button' }, 'Add');
   add.addEventListener('click', function () {
     call(add, function () {
-      return PUT('/api/config/dropdowns/' + g.key, { internal: newInternal.value.trim(), display: newDisplay.value.trim(), active: true });
+      return PUT('/api/config/dropdowns/' + g.key, { internal: g.nameOnly ? '' : newInternal.value.trim(), display: newDisplay.value.trim(), active: true });
     }, 'Added');
   });
   body.appendChild(h('tr', null, h('td', null, newInternal), h('td', null, newDisplay),
@@ -146,7 +146,7 @@ function dropdownCard(g) {
   card.appendChild(h('h2', { style: 'margin-top:0' }, g.label));
   card.appendChild(h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
     h('thead', null, h('tr', null,
-      h('th', null, 'Internal value'), h('th', null, 'Display value'),
+      g.nameOnly ? h('th', null, '') : h('th', null, 'Internal value'), h('th', null, g.nameOnly ? 'Area name' : 'Display value'),
       g.supportsActive ? h('th', { class: 'c' }, 'Active') : null,
       h('th', { class: 'r' }, 'Used by'), h('th', null, ''))),
     body)));

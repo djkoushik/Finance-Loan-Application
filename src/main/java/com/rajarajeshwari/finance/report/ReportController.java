@@ -134,25 +134,12 @@ public class ReportController {
 
     // ------------------------------------------------------------------ dues
 
-    /** Every running account with what has been paid up to the date and what is still due. */
-    @GetMapping("/total-due")
-    public List<Map<String, Object>> totalDue(@RequestParam String date, @RequestParam(required = false) String area) {
+    /** Running accounts with paid / due amounts and the days elapsed since the advance; optional area filter and area order. */
+    @GetMapping("/days")
+    public List<Map<String, Object>> days(@RequestParam String date, @RequestParam(defaultValue = "name") String order,
+                                          @RequestParam(required = false) String area) {
         Map<String, Object> p = Ctx.withScope(P.of("date", P.parseDate(date, "Date")));
         return db.list("SELECT t.* FROM (SELECT dp.debtor_code, d.debtor_name, d.street, dp.account_no, dp.date_of_advance,"
-                + " dp.amount_of_advance, COALESCE(pa.paid,0) AS paid, dp.amount_of_advance - COALESCE(pa.paid,0) AS due"
-                + " FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
-                + " LEFT JOIN (SELECT debtor_code, account_no, SUM(amount) AS paid FROM payments"
-                + "   WHERE is_active AND day_date <= :date GROUP BY debtor_code, account_no) pa"
-                + "   ON pa.debtor_code = dp.debtor_code AND pa.account_no = dp.account_no"
-                + " WHERE dp.is_active AND dp.account_status = 'OPEN' AND dp.date_of_advance <= :date "
-                + Ctx.scopeSql("d") + areaClause(area, p) + ") t ORDER BY t.street, t.debtor_name, t.account_no", p);
-    }
-
-    /** Running accounts with number of days elapsed since the advance. */
-    @GetMapping("/days")
-    public List<Map<String, Object>> days(@RequestParam String date, @RequestParam(defaultValue = "name") String order) {
-        Map<String, Object> p = Ctx.withScope(P.of("date", P.parseDate(date, "Date")));
-        return db.list("SELECT t.* FROM (SELECT dp.debtor_code, d.debtor_name, dp.account_no, dp.date_of_advance,"
                 + " dp.amount_of_advance, COALESCE(pa.paid,0) AS paid, dp.amount_of_advance - COALESCE(pa.paid,0) AS due,"
                 + " (CAST(:date AS date) - dp.date_of_advance) AS no_of_days"
                 + " FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
@@ -160,7 +147,8 @@ public class ReportController {
                 + "   WHERE is_active AND day_date <= :date GROUP BY debtor_code, account_no) pa"
                 + "   ON pa.debtor_code = dp.debtor_code AND pa.account_no = dp.account_no"
                 + " WHERE dp.is_active AND dp.account_status = 'OPEN' AND dp.date_of_advance <= :date "
-                + Ctx.scopeSql("d") + ") t" + order(order), p);
+                + Ctx.scopeSql("d") + areaClause(area, p) + ") t"
+                + ("area".equals(order) ? " ORDER BY t.street, t.debtor_name, t.account_no" : order(order)), p);
     }
 
     /** Collections within a period against what was outstanding. */
@@ -238,43 +226,42 @@ public class ReportController {
         return closedBetween(f, t, area);
     }
 
-    private List<Map<String, Object>> closedForDelete(LocalDate f, LocalDate t, String area) {
-        Map<String, Object> p = Ctx.withScope(P.of("from", f, "to", t));
-        return db.list("SELECT dp.deposit_id, dp.debtor_code, d.debtor_name, d.street, dp.account_no, dp.date_of_advance,"
-                + " dp.amount_of_advance, dp.closing_date"
-                + " FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
-                + " WHERE dp.is_active AND dp.account_status = 'CLOSED' AND dp.date_of_advance BETWEEN :from AND :to "
-                + Ctx.scopeSql("d") + areaClause(area, p) + " ORDER BY dp.account_no", p);
-    }
-
-    /** Closed accounts (by date of advance) that could be removed. */
-    @GetMapping("/closed-delete")
-    public List<Map<String, Object>> closedDeletePreview(@RequestParam String from, @RequestParam String to,
-                                                         @RequestParam(required = false) String area) {
-        LocalDate f = P.parseDate(from, "From date");
-        LocalDate t = P.parseDate(to, "To date");
-        checkRange(f, t);
-        return closedForDelete(f, t, area);
-    }
-
-    /** Removes (soft-deletes) the closed accounts and their payments for the period. */
+    /**
+     * Removes (soft-deletes) the selected closed accounts and their payments. Only accounts that are really in the
+     * Closed Accounts list (fully repaid, visible to this user) are touched; anything else is ignored.
+     */
     @PostMapping("/closed-delete")
     @Transactional
+    @SuppressWarnings("unchecked")
     public Map<String, Object> closedDelete(@RequestBody Map<String, Object> body) {
-        LocalDate f = P.date(body, "from", "From date");
-        LocalDate t = P.date(body, "to", "To date");
-        checkRange(f, t);
-        List<Map<String, Object>> rows = closedForDelete(f, t, P.str(body, "area"));
-        String why = "Closed accounts cleared " + f + " to " + t;
+        Object list = body.get("accounts");
+        if (!(list instanceof List) || ((List<Object>) list).isEmpty()) {
+            throw new ApiException(400, "Please select at least one account");
+        }
+        java.util.Set<String> allowed = new java.util.HashSet<String>();
+        for (Map<String, Object> r : closedBetween(LocalDate.of(1900, 1, 1), LocalDate.of(9999, 12, 31), null)) {
+            allowed.add(r.get("debtorCode") + "|" + r.get("accountNo"));
+        }
+        String why = "Closed accounts deleted from the Closed Accounts page";
         String by = Ctx.user().getUsername();
-        for (Map<String, Object> r : rows) {
-            Map<String, Object> q = P.of("c", r.get("debtorCode"), "a", r.get("accountNo"), "r", why, "u", by);
+        int deleted = 0;
+        for (Object o : (List<Object>) list) {
+            if (!(o instanceof Map)) {
+                continue;
+            }
+            Map<String, Object> a = (Map<String, Object>) o;
+            String code = P.str(a, "debtorCode");
+            int no = P.integer(a, "accountNo", "Account number");
+            if (!allowed.contains(code + "|" + no)) {
+                continue;
+            }
+            Map<String, Object> q = P.of("c", code, "a", no, "r", why, "u", by);
             db.update("UPDATE payments SET is_active = false, delete_reason = :r, deleted_by = :u"
                     + " WHERE is_active AND debtor_code = :c AND account_no = :a", q);
-            db.update("UPDATE deposits SET is_active = false, delete_reason = :r, deleted_by = :u"
+            deleted += db.update("UPDATE deposits SET is_active = false, delete_reason = :r, deleted_by = :u"
                     + " WHERE is_active AND debtor_code = :c AND account_no = :a", q);
         }
-        return P.of("deleted", rows.size());
+        return P.of("deleted", deleted);
     }
 
     // ------------------------------------------------------------------ dashboard

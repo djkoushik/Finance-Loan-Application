@@ -14,12 +14,10 @@ const NAV = [
   { path: 'r-loans', label: 'Loans Statements' },
   { path: 'r-paid-day', label: 'Paid Amount on a Date' },
   { path: 'r-pay-rec', label: 'Payments & Receipts' },
-  { path: 'r-total-due', label: 'Total Due Amount' },
   { path: 'r-ledger', label: 'Daily Payment Ledger' },
   { path: 'r-days', label: 'No. of Days of Accounts' },
   { path: 'r-month-due', label: 'Month-wise Due List' },
   { path: 'r-closed', label: 'Closed Accounts' },
-  { path: 'delete-closed', label: 'Delete Closed Accounts' },
   { group: 'Administration' },
   { path: 'password', label: 'Change Password' },
   { path: 'backup', label: 'Backup & Restore', admin: true },
@@ -41,7 +39,7 @@ const ICONS = {
   trash: 'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13'
 };
 function navIcon(path) {
-  const d = ICONS[path] || (path === 'delete-closed' ? ICONS.trash : path.indexOf('r-') === 0 ? ICONS.report : ICONS.home);
+  const d = ICONS[path] || (path.indexOf('r-') === 0 ? ICONS.report : ICONS.home);
   return h('span', { class: 'ic', html: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>' });
 }
 const HINTS = {
@@ -53,12 +51,10 @@ const HINTS = {
   closing: 'Accounts that have been paid in full and can now be closed.',
   'r-paid-day': 'Payments received on one date, debtor by debtor.',
   'r-pay-rec': 'Money lent out compared with money collected, day by day.',
-  'r-total-due': 'What every running account has paid and still owes.',
   'r-ledger': 'The full payment history of a single account.',
-  'r-days': 'Running accounts and how many days have passed since the advance.',
+  'r-days': 'Running accounts with what is paid and due, and the days since the advance. Filter or order by area.',
   'r-month-due': 'Collections within a period against what was outstanding.',
   'r-closed': 'Accounts that were fully repaid within the period.',
-  'delete-closed': 'Clear out old closed accounts to keep the lists short.',
   password: 'Keep your account safe with a new password.',
   backup: 'Download a copy of all data, or restore from one.',
   config: 'Rename pages, the header and the profile name, and manage the values in dropdown lists.'

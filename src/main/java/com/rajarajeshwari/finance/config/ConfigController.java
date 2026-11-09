@@ -174,7 +174,7 @@ public class ConfigController {
     public List<Map<String, Object>> dropdowns() {
         requireAdmin();
         List<Map<String, Object>> out = new ArrayList<Map<String, Object>>();
-        for (String key : new String[]{"gender", "note", "role"}) {
+        for (String key : new String[]{"gender", "note", "role", "area"}) {
             out.add(group(key));
         }
         return out;
@@ -208,6 +208,10 @@ public class ConfigController {
             int id = internal.isEmpty() ? nextId("note_types", "note_id") : intValue(internal);
             db.update("INSERT INTO note_types(note_id, note) VALUES (:i, :d)"
                     + " ON CONFLICT (note_id) DO UPDATE SET note = EXCLUDED.note", P.of("i", id, "d", display));
+        } else if ("area".equals(key)) {
+            String name = display.trim();
+            db.update("INSERT INTO areas(area_name, is_active) VALUES (:n, :a)"
+                    + " ON CONFLICT (area_name) DO UPDATE SET is_active = EXCLUDED.is_active", P.of("n", name, "a", active));
         } else if ("role".equals(key)) {
             int id = internal.isEmpty() ? nextId("roles", "role_id") : intValue(internal);
             if (id == 1 && !active) {
@@ -234,6 +238,8 @@ public class ConfigController {
         }
         if ("gender".equals(key)) {
             db.update("DELETE FROM dropdown_values WHERE dropdown_key = 'gender' AND internal_value = :i", P.of("i", internal));
+        } else if ("area".equals(key)) {
+            db.update("DELETE FROM areas WHERE area_name = :i", P.of("i", internal));
         } else if ("note".equals(key)) {
             db.update("DELETE FROM note_types WHERE note_id = :i", P.of("i", intValue(internal)));
         } else if ("role".equals(key)) {
@@ -251,11 +257,17 @@ public class ConfigController {
         String label;
         boolean supportsActive = true;
         boolean numeric = true;
+        boolean nameOnly = false;
         if ("gender".equals(key)) {
             label = "Gender";
             numeric = false;
             rows = db.list("SELECT internal_value AS internal, display_value AS display, is_active AS active"
                     + " FROM dropdown_values WHERE dropdown_key = 'gender' ORDER BY internal_value");
+        } else if ("area".equals(key)) {
+            label = "Areas (colony / street)";
+            numeric = false;
+            nameOnly = true;
+            rows = db.list("SELECT area_name AS internal, area_name AS display, is_active AS active FROM areas ORDER BY area_name");
         } else if ("note".equals(key)) {
             label = "Deposit note";
             supportsActive = false;
@@ -269,13 +281,16 @@ public class ConfigController {
             r.put("inUse", inUse(key, internal));
             r.put("locked", "role".equals(key) && "1".equals(internal));
         }
-        return P.of("key", key, "label", label, "supportsActive", supportsActive, "numeric", numeric, "items", rows);
+        return P.of("key", key, "label", label, "supportsActive", supportsActive, "numeric", numeric, "nameOnly", nameOnly, "items", rows);
     }
 
     /** How many records use the value. */
     private long inUse(String key, String internal) {
         if ("gender".equals(key)) {
             return db.count("SELECT count(*) FROM debtors WHERE gender = :v", P.of("v", internal));
+        }
+        if ("area".equals(key)) {
+            return db.count("SELECT count(*) FROM debtors WHERE street = :v", P.of("v", internal));
         }
         if ("note".equals(key)) {
             return db.count("SELECT count(*) FROM deposits WHERE note = :v", P.of("v", intValue(internal)));

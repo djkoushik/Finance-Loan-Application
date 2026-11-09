@@ -31,6 +31,8 @@ public class BootstrapData implements ApplicationRunner {
         if (count("note_types") == 0) {
             jdbc.update("INSERT INTO note_types(note_id, note) VALUES (1, 'PROMISSORY NOTE'), (2, 'VEHICLE PAPERS'), (3, 'NO')");
         }
+        // every area already used by a debtor must be in the Areas list
+        jdbc.update("INSERT INTO areas(area_name) SELECT DISTINCT trim(street) FROM debtors WHERE trim(street) <> '' ON CONFLICT DO NOTHING");
     }
 
     private long count(String table) {

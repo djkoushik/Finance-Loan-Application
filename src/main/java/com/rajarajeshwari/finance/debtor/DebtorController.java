@@ -60,6 +60,7 @@ public class DebtorController {
     public Map<String, Object> lookups() {
         Map<String, Object> out = new HashMap<String, Object>();
         out.put("areas", areas());
+        out.put("areaChoices", db.list("SELECT area_name AS name, is_active AS active FROM areas ORDER BY area_name"));
         out.put("notes", db.list("SELECT note_id, note FROM note_types ORDER BY note_id"));
         // active ones fill the dropdown; allGenders (code -> name) also covers switched-off values still on old records
         out.put("genders", db.list("SELECT internal_value AS code, display_value AS name FROM dropdown_values"
@@ -257,7 +258,11 @@ public class DebtorController {
         p.put("gphone", gphone.isEmpty() ? "" : phone(gphone, "Guarantor cell number"));
         p.put("gname", P.str(b, "guarantorName"));
         p.put("hno", P.str(b, "houseNo"));
-        p.put("street", P.required(b, "street", "Colony/Street (area)"));
+        String street = P.required(b, "street", "Colony/Street (area)");
+        if (db.count("SELECT count(*) FROM areas WHERE area_name = :a", P.of("a", street)) == 0) {
+            throw new ApiException(400, "Area is not in the Areas list (add it in the Config Center)");
+        }
+        p.put("street", street);
         p.put("city", P.str(b, "city"));
         p.put("state", P.str(b, "state"));
         p.put("pin", pin(P.str(b, "pin"), "Pin"));

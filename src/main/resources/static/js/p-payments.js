@@ -3,8 +3,7 @@
 
 const ORDER_MODES = [
   { value: 'area', label: 'Area wise' },
-  { value: 'name', label: 'Order by name' },
-  { value: 'account', label: 'Order by account number' }
+  { value: 'name', label: 'Order by name' }
 ];
 
 /** Shared filter bar: date, ordering and area. Returns {node, params(), onLoad}. */

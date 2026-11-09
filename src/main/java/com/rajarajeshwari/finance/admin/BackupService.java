@@ -152,6 +152,10 @@ public class BackupService {
                     }
                 }
                 realignCounters(c);
+                try (Statement st = c.createStatement()) {
+                    st.execute("INSERT INTO areas(area_name) SELECT DISTINCT trim(street) FROM debtors"
+                            + " WHERE trim(street) <> '' ON CONFLICT DO NOTHING");
+                }
                 c.commit();
             } catch (ApiException e) {
                 c.rollback();

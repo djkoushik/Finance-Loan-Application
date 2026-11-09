@@ -201,7 +201,7 @@ function radioGroup(name, items, value, onchange) {
 function dataTable(columns, rows, opts) {
   opts = opts || {};
   if (!rows || !rows.length) return h('div', { class: 'empty' }, opts.empty || 'No records found');
-  const head = h('tr', null, columns.map(function (c) { return h('th', { class: c.align || '' }, c.label); }));
+  const head = h('tr', null, columns.map(function (c) { return h('th', { class: c.align || '' }, c.head ? c.head() : c.label); }));
   const body = h('tbody');
   rows.forEach(function (row, i) {
     const tr = h('tr', { class: opts.rowClass ? opts.rowClass(row) : '' });

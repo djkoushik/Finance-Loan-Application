@@ -66,7 +66,12 @@ route('debtors', 'Add/Update Debtor', function (main) {
     f.gender = select([{ value: '', label: '- Select -' }].concat(App.lookups.genders.map(function (g) { return { value: g.code, label: g.name }; })), d.gender || '');
     inp('email', { type: 'email', maxlength: 100 });
     inp('phone', { type: 'tel', maxlength: 10, inputmode: 'numeric', placeholder: '10 digit mobile' });
-    inp('street', { list: 'areaList', maxlength: 100 });
+    (function () {
+      const cur = d.street || '';
+      const opts = (App.lookups.areaChoices || []).filter(function (a) { return a.active || a.name === cur; })
+        .map(function (a) { return { value: a.name, label: a.name }; });
+      f.street = select([{ value: '', label: '- Select area -' }].concat(opts), cur);
+    })();
     inp('houseNo', { maxlength: 100 });
     inp('city', { maxlength: 100 });
     inp('state', { maxlength: 100 });
@@ -85,7 +90,6 @@ route('debtors', 'Add/Update Debtor', function (main) {
       if (file.files[0]) img.src = URL.createObjectURL(file.files[0]);
     });
 
-    const datalist = h('datalist', { id: 'areaList' }, (App.lookups.areas || []).map(function (a) { return h('option', { value: a }); }));
     const save = h('button', { class: 'btn', type: 'button' }, editing ? 'Update Debtor' : 'Save Debtor');
     save.addEventListener('click', function () {
       busy(save, async function () {

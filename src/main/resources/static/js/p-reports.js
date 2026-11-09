@@ -26,19 +26,21 @@ function reportPage(cfg) {
     }
     if (cfg.area) { f.area = areaSelect(true); row.appendChild(field('Area', f.area)); }
     if (cfg.order) {
-      f.order = radioGroup('ord', [{ value: 'name', label: 'Order by name' }, { value: 'account', label: 'Order by account number' }], 'name');
+      const ords = [{ value: 'name', label: 'Order by name' }];
+      if (cfg.orderByArea) ords.push({ value: 'area', label: 'Order by area' });
+      f.order = radioGroup('ord', ords, 'name');
       row.appendChild(field('Order', f.order));
     }
     const gen = h('button', { class: 'btn', type: 'button' }, 'Generate Report');
     const pdf = h('button', { class: 'btn secondary', type: 'button' }, 'Export to PDF');
     const xls = h('button', { class: 'btn secondary', type: 'button' }, 'Export to Excel');
     const prt = h('button', { class: 'btn secondary', type: 'button', onclick: function () { window.print(); } }, 'Print');
-    row.appendChild(gen);
     const out = h('div');
-    const tools = h('div', { class: 'actions no-print hidden' }, pdf, xls, prt);
+    const tools = h('div', { class: 'actions no-print hidden', style: 'margin-top:0' }, pdf, xls, prt);
+    row.appendChild(gen);
+    row.appendChild(tools);
     main.appendChild(h('div', { class: 'card no-print' }, row));
     main.appendChild(out);
-    main.appendChild(tools);
 
     let rows = null;
     let params = null;
@@ -261,13 +263,8 @@ reportPage({
     mcol('receivedAmount', 'Receipts (collected)', true)]
 });
 reportPage({
-  path: 'r-total-due', title: 'Total Due Amount', endpoint: '/api/reports/total-due', date: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
-    mcol('paid', 'Paid', true), mcol('due', 'Due', true)]
-});
-reportPage({
-  path: 'r-days', title: 'No. of Days of Accounts', endpoint: '/api/reports/days', date: true, order: true,
-  columns: [COL.no, COL.code, COL.name, COL.advDate, mcol('amountOfAdvance', 'Amount', true), mcol('paid', 'Paid Amount', true),
+  path: 'r-days', title: 'No. of Days of Accounts', endpoint: '/api/reports/days', date: true, area: true, order: true, orderByArea: true,
+  columns: [COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true), mcol('paid', 'Paid Amount', true),
     mcol('due', 'Due Amount', true), { key: 'noOfDays', label: 'No. of Days', align: 'c' }]
 });
 reportPage({
@@ -275,12 +272,6 @@ reportPage({
   columns: [COL.no, COL.code, COL.name, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
     mcol('paidBefore', 'Paid before period', true), mcol('paidInPeriod', 'Paid in period', true), mcol('paidTotal', 'Paid total', true), mcol('due', 'Due', true)]
 });
-reportPage({
-  path: 'r-closed', title: 'Closed Accounts', endpoint: '/api/reports/closed-between', range: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
-    { key: 'closedDate', label: 'Closed Date', fmt: fmt.date }, { key: 'noOfDays', label: 'No. of Days', align: 'c' }]
-});
-
 /* ---------------------------------------------------------------- ledger */
 route('r-ledger', 'Daily Payment Ledger', async function (main) {
   const debtors = await GET('/api/debtors');
@@ -292,7 +283,7 @@ route('r-ledger', 'Daily Payment Ledger', async function (main) {
   const radios = radioGroup('lstatus', [{ value: 'ALL', label: 'All accounts' }, { value: 'OPEN', label: 'Running account' }, { value: 'CLOSED', label: 'Closed accounts' }],
     'ALL', function (v) { status = v; loadAccounts().catch(fail); });
   const out = h('div');
-  const tools = h('div', { class: 'actions no-print hidden' });
+  const tools = h('div', { class: 'actions no-print hidden', style: 'margin-top:0' });
   let current = null;
 
   async function loadAccounts() {
@@ -340,43 +331,97 @@ route('r-ledger', 'Daily Payment Ledger', async function (main) {
   debtorSel.addEventListener('change', function () { clear(out); tools.classList.add('hidden'); loadAccounts().catch(fail); });
   accSel.addEventListener('change', function () { show().catch(fail); });
   main.appendChild(h('div', { class: 'card no-print' }, h('div', { class: 'row' },
-    field('Debtor name', debtorSel, { required: true }), field('Accounts', radios), field('Account', accSel, { required: true }))));
+    field('Debtor name', debtorSel, { required: true }), field('Accounts', radios), field('Account', accSel, { required: true }), tools)));
   main.appendChild(out);
-  main.appendChild(tools);
 });
 
-/* ---------------------------------------------------------------- delete closed accounts */
-route('delete-closed', 'Delete Closed Accounts', function (main) {
+/* ---------------------------------------------------------------- closed accounts (with delete) */
+route('r-closed', 'Closed Accounts', function (main) {
+  const title = pageName('r-closed', 'Closed Accounts');
   const t = fmt.today();
-  const from = h('input', { type: 'date', value: t.slice(0, 4) + '-01-01' });
+  const from = h('input', { type: 'date', value: t.slice(0, 8) + '01' });
   const to = h('input', { type: 'date', value: t });
   const areaSel = areaSelect(true);
-  const out = h('div');
   const gen = h('button', { class: 'btn', type: 'button' }, 'Generate Report');
-  const del = h('button', { class: 'btn danger hidden', type: 'button' }, 'Delete Accounts');
-  main.appendChild(h('div', { class: 'card' }, h('p', { style: 'margin-top:0;color:#667585' },
-    'Lists accounts that are already closed, by date of advance. Deleting hides them and their payments from all lists and reports.'),
-    h('div', { class: 'row' }, field('From date', from, { required: true }), field('To date', to, { required: true }), field('Area', areaSel), gen)));
+  const del = h('button', { class: 'btn danger', type: 'button', disabled: true }, 'Delete');
+  const pdf = h('button', { class: 'btn secondary', type: 'button' }, 'Export to PDF');
+  const xls = h('button', { class: 'btn secondary', type: 'button' }, 'Export to Excel');
+  const prt = h('button', { class: 'btn secondary', type: 'button', onclick: function () { window.print(); } }, 'Print');
+  const out = h('div');
+  const tools = h('div', { class: 'actions no-print hidden', style: 'margin-top:0' }, pdf, xls, prt);
+  main.appendChild(h('div', { class: 'card no-print' }, h('div', { class: 'row' },
+    field('From date', from, { required: true }), field('To date', to, { required: true }), field('Area', areaSel), gen, tools, del)));
   main.appendChild(out);
-  main.appendChild(h('div', { class: 'actions' }, del));
-  let count = 0;
+
+  let rows = null;
+  let params = null;
+  let boxes = [];
+  let master = null;
+
+  const refreshSelection = function () {
+    const n = boxes.filter(function (b) { return b && b.checked; }).length;
+    del.disabled = n === 0;
+    if (master) { master.checked = n > 0 && n === boxes.length; master.indeterminate = n > 0 && n < boxes.length; }
+  };
+  const columns = [
+    {
+      key: null, label: '', align: 'c', noExport: true,
+      head: function () {
+        master = h('input', { type: 'checkbox', title: 'Select all' });
+        master.addEventListener('change', function () {
+          boxes.forEach(function (b) { b.checked = master.checked; });
+          refreshSelection();
+        });
+        return master;
+      },
+      render: function (row, i) {
+        const b = h('input', { type: 'checkbox' });
+        b.addEventListener('change', refreshSelection);
+        boxes[i] = b;
+        return b;
+      }
+    },
+    COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
+    { key: 'closedDate', label: 'Closed Date', fmt: fmt.date }, { key: 'noOfDays', label: 'No. of Days', align: 'c' }
+  ];
+  const exportCols = columns.filter(function (c) { return c.key; });
 
   gen.addEventListener('click', function () {
     busy(gen, async function () {
       if (!from.value || !to.value) throw new Error('Please choose the from and to dates');
-      const rows = await GET('/api/reports/closed-delete', { from: from.value, to: to.value, area: areaSel.value });
-      count = rows.length;
-      clear(out).appendChild(dataTable([COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
-        { key: 'closingDate', label: 'Closing Date', fmt: fmt.date }], rows, { empty: 'No closed accounts in this period' }));
-      del.classList.toggle('hidden', !rows.length);
+      if (to.value < from.value) throw new Error('To date cannot be before From date');
+      params = { from: from.value, to: to.value, area: areaSel.value };
+      boxes = []; master = null;
+      rows = await GET('/api/reports/closed-between', params);
+      clear(out).appendChild(dataTable(columns, rows, { empty: 'No closed accounts found for the selected criteria' }));
+      tools.classList.toggle('hidden', !rows.length);
+      refreshSelection();
     });
   });
   del.addEventListener('click', function () {
     busy(del, async function () {
-      if (!(await confirmBox('Delete closed accounts', 'Delete ' + count + ' closed account(s) and all their payments? This cannot be undone from the screen.', 'Delete', true))) return;
-      const res = await POST('/api/reports/closed-delete', { from: from.value, to: to.value, area: areaSel.value });
+      const picked = rows.filter(function (r, i) { return boxes[i] && boxes[i].checked; });
+      if (!picked.length) return;
+      if (!(await confirmBox('Delete closed accounts', 'Delete ' + picked.length + ' closed account(s) and all their payments? This cannot be undone from the screen.', 'Delete', true))) return;
+      const res = await POST('/api/reports/closed-delete', {
+        accounts: picked.map(function (r) { return { debtorCode: r.debtorCode, accountNo: r.accountNo }; })
+      });
       ok(res.deleted + ' account(s) deleted');
       gen.click();
     });
   });
+  const exporter = function (btn, kind) {
+    btn.addEventListener('click', function () {
+      busy(btn, async function () {
+        if (!rows) throw new Error('Generate the report first');
+        const spec = tableSpec(exportCols, rows);
+        spec.title = title;
+        spec.subtitle = 'From ' + fmt.date(params.from) + ' to ' + fmt.date(params.to) + '   Area: ' + (params.area || 'All');
+        await downloadExport(kind, spec);
+      });
+    });
+  };
+  exporter(pdf, 'pdf');
+  exporter(xls, 'csv');
+  gen.click();
 });
