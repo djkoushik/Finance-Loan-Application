@@ -85,16 +85,171 @@ function reportPage(cfg) {
   });
 }
 
-reportPage({
-  path: 'r-advance-day', title: 'Advances on a Date', endpoint: '/api/reports/advance-on-date', date: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, mcol('amountOfAdvance', 'Amount of Advance', true),
-    mcol('dayOfPayment', 'Day of Payment'), { key: 'closingDate', label: 'Closing Date', fmt: fmt.date }, { key: 'noteText', label: 'Note' }]
+/* ---------------------------------------------------------------- loans statements */
+/* Per-date summary (10 dates at a time) with an expandable debtor panel inside each row. */
+route('r-loans', 'Loans Statements', function (main) {
+  const PAGE = 10;
+  const t = fmt.today();
+  const from = h('input', { type: 'date', value: t.slice(0, 8) + '01' });
+  const to = h('input', { type: 'date', value: t });
+  const area = areaSelect(true);
+  const gen = h('button', { class: 'btn ls-go', type: 'button' }, 'Generate Report');
+  const CHEVRON = '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const rupee = function (n) { return '₹ ' + fmt.money(n || 0); };
+  const initials = function (name) {
+    const p = String(name || '?').trim().split(/\s+/);
+    return ((p[0] || '?')[0] + (p.length > 1 ? p[1][0] : '')).toUpperCase();
+  };
+  const tile = function (cls, label) {
+    const v = h('div', { class: 'ls-tile-v' }, '-');
+    return { v: v, el: h('div', { class: 'ls-tile ' + cls }, h('div', { class: 'ls-tile-l' }, label), v) };
+  };
+
+  main.appendChild(h('p', { class: 'ls-lead no-print' }, 'Advances given day by day. Open a date to see which debtors received a loan.'));
+  main.appendChild(h('div', { class: 'ls-filters no-print' },
+    field('From Date', from, { required: true }), field('To Date', to, { required: true }), field('Area', area), gen));
+
+  const tDays = tile('t-navy', 'Dates with advances');
+  const tAcc = tile('t-teal', 'Loans given');
+  const tTotal = tile('t-gold', 'Total advanced');
+  const tMax = tile('t-plum', 'Highest single day');
+  const tiles = h('div', { class: 'ls-tiles hidden' }, tDays.el, tAcc.el, tTotal.el, tMax.el);
+  main.appendChild(tiles);
+  const out = h('div', { class: 'ls-out' });
+  main.appendChild(out);
+
+  let q = null;       // criteria of the last Generate, so Next keeps the same filter
+  let page = 0;       // zero-based page currently shown
+  let totalDays = 0;
+  let maxDay = 1;
+  let tbody = null;
+  let nextBtn = null;
+  let prevBtn = null;
+  let status = null;
+  let bar = null;
+
+  function setProgress(shown) {
+    const first = page * PAGE + 1;
+    const pages = Math.max(1, Math.ceil(totalDays / PAGE));
+    status.textContent = 'Showing ' + first + '–' + (first + shown - 1) + ' of ' + totalDays + ' dates · Page ' + (page + 1) + ' of ' + pages;
+    bar.style.width = Math.round((page * PAGE + shown) * 100 / totalDays) + '%';
+    prevBtn.disabled = page === 0;
+    nextBtn.disabled = (page + 1) * PAGE >= totalDays;
+  }
+
+  function detailPanel(date, rows) {
+    const sum = rows.reduce(function (a, r) { return a + (Number(r.amountOfAdvance) || 0); }, 0);
+    if (!rows.length) return h('div', { class: 'ls-panel' }, h('div', { class: 'ls-empty-sm' }, 'No debtors found for this date'));
+    const body = h('tbody');
+    rows.forEach(function (r) {
+      body.appendChild(h('tr', null,
+        h('td', null, h('div', { class: 'ls-person' },
+          h('span', { class: 'ls-avatar' }, initials(r.debtorName)),
+          h('span', null, h('span', { class: 'ls-pname' }, r.debtorName), h('span', { class: 'ls-pcode' }, r.debtorCode)))),
+        h('td', null, r.street ? h('span', { class: 'ls-chip' }, r.street) : ''),
+        h('td', { class: 'r ls-amt' }, rupee(r.amountOfAdvance)),
+        h('td', { class: 'r' }, fmt.money(r.dayOfPayment)),
+        h('td', null, fmt.date(r.closingDate)),
+        h('td', { class: 'ls-note' }, r.noteText || '')));
+    });
+    return h('div', { class: 'ls-panel' },
+      h('div', { class: 'ls-panel-head' },
+        h('div', null, h('div', { class: 'ls-panel-title' }, 'Debtors on ' + fmt.date(date)),
+          h('div', { class: 'ls-panel-sub' }, rows.length + (rows.length === 1 ? ' loan' : ' loans') + ' · ' + rupee(sum))),
+        h('span', { class: 'ls-badge' }, rows.length)),
+      h('div', { class: 'ls-scroll' }, h('table', { class: 'ls-sub' },
+        h('thead', null, h('tr', null, h('th', null, 'Debtor'), h('th', null, 'Area'), h('th', { class: 'r' }, 'Advance'),
+          h('th', { class: 'r' }, 'Day of Payment'), h('th', null, 'Closing Date'), h('th', null, 'Note'))),
+        body)));
+  }
+
+  function addRows(rows) {
+    rows.forEach(function (r, i) {
+      const date = String(r.dateOfAdvance).slice(0, 10);
+      const btn = h('button', { class: 'ls-toggle', type: 'button', 'aria-expanded': 'false', 'aria-label': 'Show debtors on ' + fmt.date(date), title: 'Show debtors', html: CHEVRON });
+      const pct = Math.max(3, Math.round((Number(r.advanceAmount) || 0) * 100 / maxDay));
+      const tr = h('tr', { class: 'ls-row' },
+        h('td', { class: 'ls-c-toggle' }, btn),
+        h('td', { class: 'c ls-muted' }, page * PAGE + i + 1),
+        h('td', { class: 'ls-date' }, fmt.date(date)),
+        h('td', { class: 'c' }, h('span', { class: 'ls-count' }, fmt.money(r.accounts))),
+        h('td', { class: 'r ls-money' }, h('div', { class: 'ls-money-in' }, h('span', null, rupee(r.advanceAmount)),
+          h('span', { class: 'ls-meter' }, h('span', { style: 'width:' + pct + '%' })))));
+      let detail = null;
+      const setOpen = function (open) {
+        tr.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.title = open ? 'Hide debtors' : 'Show debtors';
+        if (detail) detail.classList.toggle('hidden', !open);
+      };
+      btn.addEventListener('click', function () {
+        if (detail) { setOpen(detail.classList.contains('hidden')); return; }
+        busy(btn, async function () {
+          btn.classList.add('loading');
+          try {
+            const rows2 = await GET('/api/reports/advance-on-date', { date: date, area: q.area });
+            detail = h('tr', { class: 'ls-detail' }, h('td', { colspan: 5 }, detailPanel(date, rows2)));
+            tr.after(detail);
+            setOpen(true);
+          } finally { btn.classList.remove('loading'); }
+        });
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  /** Shows exactly one page of dates (replacing the previous one). */
+  async function loadPage(n) {
+    const rows = await GET('/api/reports/advance-between', { from: q.from, to: q.to, area: q.area, limit: PAGE, offset: n * PAGE });
+    page = n;
+    clear(tbody);
+    addRows(rows);
+    setProgress(rows.length);
+    const top = tbody.closest('.ls-card');
+    if (top && top.getBoundingClientRect().top < 0) top.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  gen.addEventListener('click', function () {
+    busy(gen, async function () {
+      if (!from.value || !to.value) throw new Error('Please choose the from and to dates');
+      if (to.value < from.value) throw new Error('To date cannot be before From date');
+      q = { from: from.value, to: to.value, area: area.value };
+      page = 0;
+      clear(out);
+      const s = await GET('/api/reports/advance-summary', q);
+      totalDays = Number(s.days) || 0;
+      maxDay = Number(s.maxDay) || 1;
+      tiles.classList.remove('hidden');
+      tDays.v.textContent = fmt.money(totalDays);
+      tAcc.v.textContent = fmt.money(s.accounts || 0);
+      tTotal.v.textContent = rupee(s.total);
+      tMax.v.textContent = rupee(s.maxDay);
+      if (!totalDays) {
+        out.appendChild(h('div', { class: 'ls-empty' }, h('div', { class: 'ls-empty-ic' }, '∅'),
+          h('div', { class: 'ls-empty-t' }, 'No loans in this period'), h('div', null, 'Try a wider date range or choose All areas.')));
+        return;
+      }
+      tbody = h('tbody');
+      status = h('span', { class: 'ls-status' });
+      bar = h('span', null);
+      prevBtn = h('button', { class: 'btn secondary ls-prev', type: 'button' }, h('span', { class: 'ls-flip', html: CHEVRON }), 'Previous');
+      nextBtn = h('button', { class: 'btn ls-next', type: 'button' }, 'Next', h('span', { html: CHEVRON }));
+      prevBtn.addEventListener('click', function () { busy(prevBtn, function () { return loadPage(page - 1); }); });
+      nextBtn.addEventListener('click', function () { busy(nextBtn, function () { return loadPage(page + 1); }); });
+      out.appendChild(h('div', { class: 'ls-card' },
+        h('div', { class: 'ls-card-head' }, h('div', { class: 'ls-card-title' }, 'Advances by date'),
+          h('div', { class: 'ls-card-sub' }, fmt.date(q.from) + ' – ' + fmt.date(q.to) + ' · ' + (q.area || 'All areas'))),
+        h('div', { class: 'ls-scroll' }, h('table', { class: 'ls-main' },
+          h('thead', null, h('tr', null, h('th', { class: 'ls-c-toggle' }, ''), h('th', { class: 'c' }, 'S.No'), h('th', null, 'Date'),
+            h('th', { class: 'c' }, 'Loans'), h('th', { class: 'r' }, 'Advance Amount'))),
+          tbody)),
+        h('div', { class: 'ls-foot no-print' }, h('div', { class: 'ls-prog' }, status, h('span', { class: 'ls-track' }, bar)), h('div', { class: 'ls-pager' }, prevBtn, nextBtn))));
+      await loadPage(0);
+    });
+  });
+  gen.click();
 });
-reportPage({
-  path: 'r-advance-between', title: 'Advances Between Dates', endpoint: '/api/reports/advance-between', range: true, area: true,
-  columns: [COL.no, { key: 'dateOfAdvance', label: 'Date', fmt: fmt.date }, { key: 'accounts', label: 'Accounts', align: 'c', total: true, fmt: fmt.money },
-    mcol('advanceAmount', 'Advance Amount', true)]
-});
+
 reportPage({
   path: 'r-paid-day', title: 'Paid Amount on a Date', endpoint: '/api/reports/paid-on-date', date: true, area: true,
   columns: [COL.no, COL.code, COL.name, COL.area, { key: 'dayDate', label: 'Date', fmt: fmt.date }, mcol('amount', 'Paid Amount', true)]

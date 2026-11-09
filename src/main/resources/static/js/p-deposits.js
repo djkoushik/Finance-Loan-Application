@@ -24,7 +24,7 @@ route('deposits', 'Deposits (Advances)', function (main) {
         { key: 'due', label: 'Due', align: 'r', fmt: fmt.money, total: true },
         { key: 'dateOfAdvance', label: 'Date of Advance', fmt: fmt.date },
         { key: 'closingDate', label: 'Closing Date', fmt: fmt.date },
-        { key: 'accountStatus', label: 'Status', fmt: function (v) { return v === 'OPEN' ? 'Running' : 'Closed'; } },
+        { key: 'accountStatus', label: 'Status', render: function (r) { return h('span', { class: 'pill ' + (r.accountStatus === 'OPEN' ? 'run' : 'done') }, r.accountStatus === 'OPEN' ? 'Running' : 'Closed'); } },
         { key: 'x', label: '', render: function (r) {
           return h('span', null,
             h('button', { class: 'btn small secondary', onclick: function () { showForm(r.depositId); } }, 'Edit'), ' ',

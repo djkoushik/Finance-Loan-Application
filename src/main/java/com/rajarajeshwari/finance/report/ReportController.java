@@ -64,15 +64,40 @@ public class ReportController {
     /** Total advanced per day between two dates. */
     @GetMapping("/advance-between")
     public List<Map<String, Object>> advanceBetween(@RequestParam String from, @RequestParam String to,
-                                                    @RequestParam(required = false) String area) {
+                                                    @RequestParam(required = false) String area,
+                                                    @RequestParam(required = false) Integer limit,
+                                                    @RequestParam(defaultValue = "0") int offset) {
         LocalDate f = P.parseDate(from, "From date");
         LocalDate t = P.parseDate(to, "To date");
         checkRange(f, t);
         Map<String, Object> p = Ctx.withScope(P.of("from", f, "to", t));
+        String paging = "";
+        if (limit != null) {
+            p.put("lim", Math.max(1, Math.min(limit, 1000)));
+            p.put("off", Math.max(0, offset));
+            paging = " LIMIT :lim OFFSET :off";
+        }
         return db.list("SELECT dp.date_of_advance, COUNT(*) AS accounts, SUM(dp.amount_of_advance) AS advance_amount"
                 + " FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
                 + " WHERE dp.is_active AND dp.date_of_advance BETWEEN :from AND :to " + Ctx.scopeSql("d") + areaClause(area, p)
-                + " GROUP BY dp.date_of_advance ORDER BY dp.date_of_advance", p);
+                + " GROUP BY dp.date_of_advance ORDER BY dp.date_of_advance" + paging, p);
+    }
+
+    /** Totals behind the Loans Statements summary tiles: dates, accounts, total advanced and the busiest day. */
+    @GetMapping("/advance-summary")
+    public Map<String, Object> advanceSummary(@RequestParam String from, @RequestParam String to,
+                                              @RequestParam(required = false) String area) {
+        LocalDate f = P.parseDate(from, "From date");
+        LocalDate t = P.parseDate(to, "To date");
+        checkRange(f, t);
+        Map<String, Object> p = Ctx.withScope(P.of("from", f, "to", t));
+        Map<String, Object> row = db.one("SELECT COUNT(*) AS days, COALESCE(SUM(x.accounts),0) AS accounts,"
+                + " COALESCE(SUM(x.amt),0) AS total, COALESCE(MAX(x.amt),0) AS max_day FROM"
+                + " (SELECT COUNT(*) AS accounts, SUM(dp.amount_of_advance) AS amt"
+                + "  FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
+                + "  WHERE dp.is_active AND dp.date_of_advance BETWEEN :from AND :to " + Ctx.scopeSql("d") + areaClause(area, p)
+                + "  GROUP BY dp.date_of_advance) x", p);
+        return row;
     }
 
     // ------------------------------------------------------------------ collections
