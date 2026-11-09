@@ -92,6 +92,8 @@ table.data td { padding: 6px 10px; border-top: 1px solid #e6ebf1; vertical-align
 table.data tbody tr:nth-child(even) { background: #f7f9fc; }
 table.data tr.row-red td { background: var(--red-row) !important; }
 table.data tr.row-green td { background: var(--green-row) !important; }
+/* row highlight under the mouse - applies to every grid, also over the striped and red/green rows */
+table.data tbody tr:hover td { background: #cfe0f5 !important; box-shadow: inset 0 1px 0 #9db8d9, inset 0 -1px 0 #9db8d9; cursor: default; }
 table.data tfoot td { font-weight: 700; background: #e3e9f0; border-top: 2px solid var(--navy); }
 table.data .r { text-align: right; font-variant-numeric: tabular-nums; }
 table.data .c { text-align: center; }
@@ -108,6 +110,13 @@ table.data input.amt { width: 90px; text-align: right; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 18px; }
 .stat { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 14px 16px; }
 .stat .v { font-size: 24px; font-weight: 700; color: var(--navy); }
+.bar-chart { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; padding-right: 6px; }
+.bar-row { display: grid; grid-template-columns: 120px 1fr 90px; align-items: center; gap: 10px; font-size: 13px; padding: 2px 4px; border-radius: 4px; }
+.bar-row:hover { background: #cfe0f5; }
+.bar-label { font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { background: #eef2f7; border-radius: 3px; height: 18px; }
+.bar-fill { background: linear-gradient(90deg, var(--navy), #3b6aa8); height: 100%; border-radius: 3px; min-width: 2px; }
+.bar-value { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .stat .l { color: var(--muted); font-size: 12px; margin-top: 2px; }
 
 /* ---------- photo ---------- */
@@ -155,3 +164,23 @@ table.data input.amt { width: 90px; text-align: right; }
 
 .brand-logo { width: 32px; height: 32px; border-radius: 7px; }
 #login .login-logo { display: block; width: 84px; height: 84px; margin: 0 auto 10px; border-radius: 18px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+
+/* home page clickable tiles and list widget */
+.stat.clickable { cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.stat.clickable:hover { box-shadow: 0 2px 8px rgba(0,0,0,.15); transform: translateY(-1px); }
+.stat.clickable.active { background: #eef3fb; border-color: var(--navy); }
+.widget-list { max-width: 720px; margin-bottom: 18px; }
+.widget-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.widget-scroll { max-height: 260px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.widget-scroll table { width: 100%; }
+.widget-scroll thead th { position: sticky; top: 0; background: #f3f5f9; }
+.widget-pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 8px; }
+
+/* debt by area treemap heat map */
+.heat-map { position: relative; width: 100%; padding-top: 42%; min-height: 260px; background: #fff; }
+.heat-cell { position: absolute; box-sizing: border-box; border: 2px solid #fff; border-radius: 4px; overflow: hidden; }
+.heat-in { padding: 6px 8px; }
+.heat-area { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heat-due { font-size: 20px; font-weight: 700; }
+.heat-sub { font-size: 11px; opacity: .9; }
+.heat-legend { margin-top: 10px; font-size: 12px; color: var(--muted); }

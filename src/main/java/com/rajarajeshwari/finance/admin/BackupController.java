@@ -42,7 +42,14 @@ public class BackupController {
         if (file.isEmpty()) {
             throw new ApiException(400, "Please choose a backup file");
         }
-        Map<String, Object> result = service.restore(file.getInputStream());
+        java.nio.file.Path tmp = java.nio.file.Files.createTempFile("finance-upload-", ".tmp");
+        Map<String, Object> result;
+        try {
+            file.transferTo(tmp.toFile());
+            result = service.restore(tmp);
+        } finally {
+            java.nio.file.Files.deleteIfExists(tmp);
+        }
         session.invalidate(); // the users in the backup replace the current ones: log in again
         return result;
     }

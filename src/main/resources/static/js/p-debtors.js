@@ -155,44 +155,13 @@ route('area-seq', 'Area Visiting Order', function (main) {
       const rows = await GET('/api/areas/' + encodeURIComponent(areaSel.value) + '/debtors');
       clear(out);
       if (!rows.length) { out.appendChild(h('div', { class: 'empty' }, 'No debtors in this area')); return; }
-      const inputs = rows.map(function (r, i) {
-        return h('input', { type: 'number', min: 1, class: 'amt', value: r.seq === null ? i + 1 : r.seq });
-      });
-      const swap = function (i, j) {
-        if (j < 0 || j >= rows.length) return;
-        // the sequence numbers stay with their positions; the debtors change places
-        const tmp = rows[i]; rows[i] = rows[j]; rows[j] = tmp;
-        draw();
-      };
-      const holder = h('div');
-      const draw = function () {
-        clear(holder).appendChild(dataTable([
-          { key: '#', label: 'S.No', align: 'c' },
-          { key: 'debtorCode', label: 'Debtor Code' },
-          { key: 'debtorName', label: 'Debtor Name' },
-          { key: 'dateOfJoin', label: 'Date of Joining', fmt: fmt.date },
-          { key: 'phone', label: 'Cell' },
-          { key: 'seq', label: 'Current Seq', align: 'c' },
-          { key: 'n', label: 'New Seq', render: function (r, i) { return inputs[i]; } },
-          { key: 'mv', label: 'Move', render: function (r, i) {
-            return h('span', null,
-              h('button', { class: 'btn small secondary', onclick: function () { swap(i, i - 1); } }, '▲'), ' ',
-              h('button', { class: 'btn small secondary', onclick: function () { swap(i, i + 1); } }, '▼'));
-          } }
-        ], rows));
-      };
-      draw();
-      const save = h('button', { class: 'btn' }, 'Update Sequence');
-      save.addEventListener('click', function () {
-        busy(save, async function () {
-          const items = rows.map(function (r, i) { return { debtorId: r.debtorId, seq: inputs[i].value }; });
-          await PUT('/api/areas/' + encodeURIComponent(areaSel.value) + '/sequence', { items: items });
-          ok('Your record has been updated successfully');
-          show.click();
-        });
-      });
-      out.appendChild(holder);
-      out.appendChild(h('div', { class: 'actions' }, save));
+      clear(out).appendChild(dataTable([
+        { key: '#', label: 'S.No', align: 'c' },
+        { key: 'debtorCode', label: 'Debtor Code' },
+        { key: 'debtorName', label: 'Debtor Name' },
+        { key: 'dateOfJoin', label: 'Date of Joining', fmt: fmt.date },
+        { key: 'phone', label: 'Cell' }
+      ], rows));
     });
   });
 });

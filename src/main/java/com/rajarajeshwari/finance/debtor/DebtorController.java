@@ -199,37 +199,9 @@ public class DebtorController {
     @GetMapping("/api/areas/{street}/debtors")
     public List<Map<String, Object>> areaDebtors(@PathVariable String street) {
         Map<String, Object> p = Ctx.withScope(P.of("s", street));
-        return db.list("SELECT d.debtor_id, d.debtor_code, d.debtor_name, d.date_of_join, d.phone, d.seq"
+        return db.list("SELECT d.debtor_id, d.debtor_code, d.debtor_name, d.date_of_join, d.phone"
                 + " FROM debtors d WHERE d.is_active AND d.street = :s " + Ctx.scopeSql("d")
-                + " ORDER BY d.seq NULLS LAST, d.debtor_name", p);
-    }
-
-    @PutMapping("/api/areas/{street}/sequence")
-    @Transactional
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> saveSequence(@PathVariable String street, @RequestBody Map<String, Object> body) {
-        Object items = body.get("items");
-        if (!(items instanceof List) || ((List<?>) items).isEmpty()) {
-            throw new ApiException(400, "Nothing to update");
-        }
-        List<Map<String, Object>> rows = (List<Map<String, Object>>) items;
-        java.util.Set<Integer> seen = new java.util.HashSet<Integer>();
-        for (Map<String, Object> r : rows) {
-            int seq = P.integer(r, "seq", "Sequence");
-            if (seq < 1) {
-                throw new ApiException(400, "Sequence numbers must be 1 or more");
-            }
-            if (!seen.add(seq)) {
-                throw new ApiException(400, "Sequence number " + seq + " is used more than once");
-            }
-        }
-        for (Map<String, Object> r : rows) {
-            Map<String, Object> p = Ctx.withScope(P.of("id", P.integer(r, "debtorId", "Debtor"),
-                    "seq", P.integer(r, "seq", "Sequence"), "s", street));
-            db.update("UPDATE debtors d SET seq = :seq WHERE d.debtor_id = :id AND d.street = :s AND d.is_active "
-                    + Ctx.scopeSql("d"), p);
-        }
-        return P.of("updated", rows.size());
+                + " ORDER BY d.debtor_name ASC, d.debtor_code", p);
     }
 
     // ---------------------------------------------------------------- helpers

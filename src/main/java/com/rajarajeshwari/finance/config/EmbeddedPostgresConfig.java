@@ -55,7 +55,24 @@ public class EmbeddedPostgresConfig {
     @Bean(destroyMethod = "close")
     public Database database(@Value("${finance.data-dir}") String dataDir,
                              @Value("${finance.db-port}") int port,
-                             @Value("${finance.pg-template-dir:}") String templateDir) throws IOException {
+                             @Value("${finance.pg-template-dir:}") String templateDir,
+                             @Value("${finance.db-url:}") String externalUrl,
+                             @Value("${finance.db-user:postgres}") String externalUser,
+                             @Value("${finance.db-password:}") String externalPassword) throws IOException {
+        // External mode: use a normally installed PostgreSQL instead of the bundled one.
+        if (externalUrl != null && !externalUrl.trim().isEmpty()) {
+            LOG.info("Using external PostgreSQL at {}", externalUrl);
+            HikariConfig ext = new HikariConfig();
+            ext.setJdbcUrl(externalUrl.trim());
+            ext.setUsername(externalUser);
+            if (externalPassword != null && !externalPassword.isEmpty()) {
+                ext.setPassword(externalPassword);
+            }
+            ext.setMaximumPoolSize(8);
+            ext.setInitializationFailTimeout(60000);
+            ext.setPoolName("finance");
+            return new Database(null, new HikariDataSource(ext));
+        }
         EmbeddedPostgres server = null;
         if (!portOpen(port)) {
             Path dir = Paths.get(dataDir.replace("${user.home}", System.getProperty("user.home")))

@@ -7,7 +7,6 @@ const COL = {
   code: { key: 'debtorCode', label: 'Debtor Code' },
   name: { key: 'debtorName', label: 'Debtor Name' },
   area: { key: 'street', label: 'Area' },
-  acc: { key: 'accountNo', label: 'A/C No', align: 'c' },
   advDate: { key: 'dateOfAdvance', label: 'Date of Advance', fmt: fmt.date }
 };
 function mcol(key, label, total) { return { key: key, label: label, align: 'r', fmt: fmt.money, total: !!total }; }
@@ -88,7 +87,7 @@ function reportPage(cfg) {
 
 reportPage({
   path: 'r-advance-day', title: 'Advances on a Date', endpoint: '/api/reports/advance-on-date', date: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, COL.acc, mcol('amountOfAdvance', 'Amount of Advance', true),
+  columns: [COL.no, COL.code, COL.name, COL.area, mcol('amountOfAdvance', 'Amount of Advance', true),
     mcol('dayOfPayment', 'Day of Payment'), { key: 'closingDate', label: 'Closing Date', fmt: fmt.date }, { key: 'noteText', label: 'Note' }]
 });
 reportPage({
@@ -98,7 +97,7 @@ reportPage({
 });
 reportPage({
   path: 'r-paid-day', title: 'Paid Amount on a Date', endpoint: '/api/reports/paid-on-date', date: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, COL.acc, { key: 'dayDate', label: 'Date', fmt: fmt.date }, mcol('amount', 'Paid Amount', true)]
+  columns: [COL.no, COL.code, COL.name, COL.area, { key: 'dayDate', label: 'Date', fmt: fmt.date }, mcol('amount', 'Paid Amount', true)]
 });
 reportPage({
   path: 'r-pay-rec', title: 'Payments & Receipts', endpoint: '/api/reports/payments-receipts', range: true, area: true,
@@ -107,22 +106,22 @@ reportPage({
 });
 reportPage({
   path: 'r-total-due', title: 'Total Due Amount', endpoint: '/api/reports/total-due', date: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, COL.acc, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
+  columns: [COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
     mcol('paid', 'Paid', true), mcol('due', 'Due', true)]
 });
 reportPage({
   path: 'r-days', title: 'No. of Days of Accounts', endpoint: '/api/reports/days', date: true, order: true,
-  columns: [COL.no, COL.code, COL.name, COL.acc, COL.advDate, mcol('amountOfAdvance', 'Amount', true), mcol('paid', 'Paid Amount', true),
+  columns: [COL.no, COL.code, COL.name, COL.advDate, mcol('amountOfAdvance', 'Amount', true), mcol('paid', 'Paid Amount', true),
     mcol('due', 'Due Amount', true), { key: 'noOfDays', label: 'No. of Days', align: 'c' }]
 });
 reportPage({
   path: 'r-month-due', title: 'Month-wise Due List', endpoint: '/api/reports/month-due', range: true, order: true,
-  columns: [COL.no, COL.code, COL.name, COL.acc, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
+  columns: [COL.no, COL.code, COL.name, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
     mcol('paidBefore', 'Paid before period', true), mcol('paidInPeriod', 'Paid in period', true), mcol('paidTotal', 'Paid total', true), mcol('due', 'Due', true)]
 });
 reportPage({
   path: 'r-closed', title: 'Closed Accounts', endpoint: '/api/reports/closed-between', range: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, COL.acc, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
+  columns: [COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
     { key: 'closedDate', label: 'Closed Date', fmt: fmt.date }, { key: 'noOfDays', label: 'No. of Days', align: 'c' }]
 });
 
@@ -211,7 +210,7 @@ route('delete-closed', 'Delete Closed Accounts', function (main) {
       if (!from.value || !to.value) throw new Error('Please choose the from and to dates');
       const rows = await GET('/api/reports/closed-delete', { from: from.value, to: to.value, area: areaSel.value });
       count = rows.length;
-      clear(out).appendChild(dataTable([COL.no, COL.code, COL.name, COL.area, COL.acc, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
+      clear(out).appendChild(dataTable([COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
         { key: 'closingDate', label: 'Closing Date', fmt: fmt.date }], rows, { empty: 'No closed accounts in this period' }));
       del.classList.toggle('hidden', !rows.length);
     });

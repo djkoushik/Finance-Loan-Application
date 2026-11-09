@@ -273,4 +273,46 @@ public class ReportController {
                 + " WHERE dp.is_active AND dp.account_status = 'OPEN' " + s, p, Long.class));
         return out;
     }
+
+    /** Names behind the home page tiles: type = debtors | open | collected | advanced. */
+    @GetMapping("/dashboard/list")
+    public List<Map<String, Object>> dashboardList(@RequestParam String type) {
+        Map<String, Object> p = Ctx.withScope(P.of("today", LocalDate.now()));
+        String s = Ctx.scopeSql("d");
+        String join = " JOIN debtors d ON d.debtor_code = ";
+        if ("debtors".equals(type)) {
+            return db.list("SELECT d.debtor_code, d.debtor_name, d.street FROM debtors d WHERE d.is_active " + s
+                    + " ORDER BY d.debtor_name, d.debtor_code", p);
+        } else if ("open".equals(type)) {
+            return db.list("SELECT d.debtor_code, d.debtor_name, d.street, dp.account_no, dp.amount_of_advance AS amount"
+                    + " FROM deposits dp" + join + "dp.debtor_code AND d.is_active"
+                    + " WHERE dp.is_active AND dp.account_status = 'OPEN' " + s
+                    + " ORDER BY d.debtor_name, dp.account_no", p);
+        } else if ("collected".equals(type)) {
+            return db.list("SELECT d.debtor_code, d.debtor_name, d.street, pm.account_no, SUM(pm.amount) AS amount"
+                    + " FROM payments pm" + join + "pm.debtor_code AND d.is_active"
+                    + " WHERE pm.is_active AND pm.day_date = :today " + s
+                    + " GROUP BY d.debtor_code, d.debtor_name, d.street, pm.account_no"
+                    + " ORDER BY d.debtor_name, pm.account_no", p);
+        } else if ("advanced".equals(type)) {
+            return db.list("SELECT d.debtor_code, d.debtor_name, d.street, dp.account_no, dp.amount_of_advance AS amount"
+                    + " FROM deposits dp" + join + "dp.debtor_code AND d.is_active"
+                    + " WHERE dp.is_active AND dp.date_of_advance = :today " + s
+                    + " ORDER BY d.debtor_name, dp.account_no", p);
+        }
+        throw new ApiException(400, "Unknown list type");
+    }
+
+    /** Debt per area for the home page chart: running accounts only, biggest outstanding amount first. */
+    @GetMapping("/dashboard/areas")
+    public List<Map<String, Object>> dashboardAreas() {
+        return db.list("SELECT d.street AS area, count(*) AS accounts, SUM(dp.amount_of_advance) AS advanced,"
+                + " SUM(COALESCE(pa.paid,0)) AS paid, SUM(dp.amount_of_advance - COALESCE(pa.paid,0)) AS due"
+                + " FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
+                + " LEFT JOIN (SELECT debtor_code, account_no, SUM(amount) AS paid FROM payments WHERE is_active"
+                + "   GROUP BY debtor_code, account_no) pa ON pa.debtor_code = dp.debtor_code AND pa.account_no = dp.account_no"
+                + " WHERE dp.is_active AND dp.account_status = 'OPEN' " + Ctx.scopeSql("d")
+                + " GROUP BY d.street HAVING SUM(dp.amount_of_advance - COALESCE(pa.paid,0)) > 0"
+                + " ORDER BY due DESC, d.street", Ctx.withScope(new HashMap<String, Object>()));
+    }
 }

@@ -119,9 +119,12 @@ public class BackupService {
 
     // ------------------------------------------------------------------ restore
 
-    /** Replaces all data with the backup. Returns a human-readable summary. */
-    public Map<String, Object> restore(InputStream upload) throws SQLException, IOException {
-        Package pkg = readZip(upload);
+    /**
+     * Replaces all data with the uploaded file. Accepts this application's own backup zip, a native SQL Server
+     * backup (.bak) of the legacy database, or a zip that contains such a .bak. Returns a human-readable summary.
+     */
+    public Map<String, Object> restore(Path upload) throws SQLException, IOException {
+        Package pkg = readUpload(upload);
 
         // safety net: keep a copy of what is being replaced
         String safety = "pre-restore-" + fileName();
@@ -231,6 +234,57 @@ public class BackupService {
     }
 
     private static final long MAX_ENTRY = 1024L * 1024 * 1024; // 1 GB per file, guards against zip bombs
+
+    private Package readUpload(Path file) throws IOException {
+        if (SqlServerBakReader.isBak(file)) {
+            return fromBak(file);
+        }
+        List<String> names = new ArrayList<String>();
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(file.toFile())) {
+            java.util.Enumeration<? extends ZipEntry> en = zf.entries();
+            while (en.hasMoreElements()) {
+                ZipEntry e = en.nextElement();
+                if (!e.isDirectory()) {
+                    names.add(e.getName());
+                }
+            }
+            for (String n : names) {
+                if (n.replace('\\', '/').startsWith("data/") && n.endsWith(".csv")) {
+                    try (InputStream in = Files.newInputStream(file)) {
+                        return readZip(in);
+                    }
+                }
+            }
+            for (String n : names) {
+                if (n.toLowerCase(Locale.ROOT).endsWith(".bak")) {
+                    Path tmp = Files.createTempFile("finance-restore-", ".bak");
+                    try (InputStream in = zf.getInputStream(zf.getEntry(n))) {
+                        Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+                        return fromBak(tmp);
+                    } finally {
+                        Files.deleteIfExists(tmp);
+                    }
+                }
+            }
+            for (String n : names) {
+                String l = n.toLowerCase(Locale.ROOT);
+                if (l.endsWith(".mdb") || l.endsWith(".accdb")) {
+                    throw new ApiException(400, "That zip contains a Microsoft Access database (" + n + ") from a different "
+                            + "application, not this finance data. Please use the SQL Server backup (.bak) or a backup zip "
+                            + "made by this application.");
+                }
+            }
+        } catch (java.util.zip.ZipException ex) {
+            throw new ApiException(400, "That file is not a SQL Server backup (.bak) or a valid backup zip");
+        }
+        throw new ApiException(400, "That is not a backup of this application: no data/<table>.csv files or SQL Server .bak found");
+    }
+
+    private Package fromBak(Path bak) throws IOException {
+        Package p = new Package();
+        p.csv.putAll(SqlServerBakReader.read(bak));
+        return p;
+    }
 
     private Package readZip(InputStream upload) throws IOException {
         Package p = new Package();

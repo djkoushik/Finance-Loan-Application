@@ -83,7 +83,7 @@ public class PaymentController {
         return out;
     }
 
-    /** Saves the amounts typed on the entry sheet. Blank amounts are ignored. */
+    /** Saves the amounts typed on the entry sheet. Blank and zero amounts are ignored. */
     @PostMapping("/api/payments/batch")
     @Transactional
     @SuppressWarnings("unchecked")
@@ -104,6 +104,9 @@ public class PaymentController {
             int amount = P.integer(e, "amount", "Amount");
             if (amount < 0) {
                 throw new ApiException(400, "Amount cannot be negative");
+            }
+            if (amount == 0) {
+                continue; // a zero amount is the same as leaving the box blank
             }
             Map<String, Object> dep = db.one("SELECT dp.amount_of_advance, dp.account_status, d.debtor_name, dp.date_of_advance"
                     + " FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
@@ -240,7 +243,7 @@ public class PaymentController {
         if (paid == null || paid < ((Number) dep.get("amountOfAdvance")).longValue()) {
             throw new ApiException(409, "This account still has an amount due and cannot be closed");
         }
-        db.update("UPDATE deposits SET account_status = 'CLOSED' WHERE debtor_code = :c AND account_no = :a AND is_active",
+        db.update("UPDATE deposits SET account_status = 'CLOSED', account_end_date = CURRENT_DATE WHERE debtor_code = :c AND account_no = :a AND is_active",
                 P.of("c", code, "a", accountNo));
         return P.of("ok", true);
     }

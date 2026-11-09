@@ -16,7 +16,6 @@ route('deposits', 'Deposits (Advances)', function (main) {
       const rows = await GET('/api/deposits', { status: status.value, area: areaSel.value, from: from.value, to: to.value });
       clear(results).appendChild(h('div', { class: 'total-line' }, rows.length + ' account(s)'));
       results.appendChild(dataTable([
-        { key: 'accountNo', label: 'A/C No', align: 'c' },
         { key: 'debtorName', label: 'Debtor Name' },
         { key: 'debtorCode', label: 'Code' },
         { key: 'street', label: 'Area' },
@@ -139,7 +138,6 @@ route('closing', 'Account Closing', function (main) {
     clear(out).appendChild(dataTable([
       { key: 'debtorCode', label: 'Debtor Code' },
       { key: 'debtorName', label: 'Debtor Name' },
-      { key: 'accountNo', label: 'Account Number', align: 'c' },
       { key: 'amountOfAdvance', label: 'Amount of Advance', align: 'r', fmt: fmt.money, total: true },
       { key: 'paid', label: 'Paid Amount', align: 'r', fmt: fmt.money, total: true },
       { key: 'due', label: 'Due Amount', align: 'r', fmt: fmt.money, total: true },

@@ -88,7 +88,6 @@ function renderEntry(pane) {
       { key: 'debtorCode', label: 'Debtor Code' },
       { key: 'debtorName', label: 'Debtor Name' },
       { key: 'phone', label: 'Phone' },
-      { key: 'accountNo', label: 'Acc No', align: 'c' },
       { key: 'dateOfAdvance', label: 'Date of Advance', fmt: fmt.date },
       { key: 'days', label: 'Days', align: 'c' },
       { key: 'amountOfAdvance', label: 'Advance', align: 'r', fmt: fmt.money },
@@ -99,24 +98,34 @@ function renderEntry(pane) {
       { key: 'amt', label: 'Amount', noExport: true, render: function (r, i) { return inputs[i]; } }
     ];
     result.appendChild(h('div', { class: 'legend' },
-      h('span', { class: 'red' }, 'Red: fully paid (ready to close)'), h('span', { class: 'green' }, 'Green: advance given on this date')));
-    result.appendChild(dataTable(cols, rows, {
-      rowClass: function (r) { return Number(r.due) <= 0 ? 'row-red' : (String(r.dateOfAdvance).slice(0, 10) === d ? 'row-green' : ''); }
-    }));
+      h('span', { class: 'red' }, 'Red: fully paid, or amount equals due (ready to close)'), h('span', { class: 'green' }, 'Green: advance given on this date')));
+    // red = nothing left to pay: already fully paid, or the amount typed equals the due (Amount - Due = 0)
+    const rowColor = function (r, i) {
+      const typed = inputs[i].value;
+      const settled = Number(r.due) <= 0 || (typed !== '' && Number(typed) === Number(r.due));
+      return settled ? 'row-red' : (String(r.dateOfAdvance).slice(0, 10) === d ? 'row-green' : '');
+    };
+    const grid = dataTable(cols, rows, { rowClass: function (r) { return rowColor(r, rows.indexOf(r)); } });
+    result.appendChild(grid);
+    const trs = grid.querySelectorAll('tbody tr');
+    const recolor = function (i) { if (trs[i]) trs[i].className = rowColor(rows[i], i); };
+    inputs.forEach(function (inp, i) { inp.addEventListener('input', function () { recolor(i); }); });
+    const recolorAll = function () { rows.forEach(function (r, i) { recolor(i); }); };
 
     const fill = h('button', { class: 'btn secondary', type: 'button', onclick: function () {
       inputs.forEach(function (inp, i) {
         if (!inp.disabled && inp.value === '' && String(rows[i].dateOfAdvance).slice(0, 10) !== d) inp.value = Math.min(rows[i].dayOfPayment, rows[i].due);
       });
       recompute();
+      recolorAll();
     } }, 'Fill daily amounts');
-    const clearBtn = h('button', { class: 'btn secondary', type: 'button', onclick: function () { inputs.forEach(function (i) { i.value = ''; }); recompute(); } }, 'Clear');
+    const clearBtn = h('button', { class: 'btn secondary', type: 'button', onclick: function () { inputs.forEach(function (i) { i.value = ''; }); recompute(); recolorAll(); } }, 'Clear');
     const save = h('button', { class: 'btn', type: 'button' }, 'Save');
     save.addEventListener('click', function () {
       busy(save, async function () {
         const entries = [];
         inputs.forEach(function (inp, i) {
-          if (!inp.disabled && inp.value !== '') entries.push({ debtorCode: rows[i].debtorCode, accountNo: rows[i].accountNo, amount: inp.value });
+          if (!inp.disabled && inp.value !== '' && Number(inp.value) !== 0) entries.push({ debtorCode: rows[i].debtorCode, accountNo: rows[i].accountNo, amount: inp.value });
         });
         if (!entries.length) throw new Error('Enter at least one amount');
         const total = entries.reduce(function (a, e) { return a + Number(e.amount); }, 0);
@@ -151,7 +160,6 @@ function renderEdit(pane) {
       { key: '#', label: 'S.No', align: 'c' },
       { key: 'debtorCode', label: 'Debtor Code' },
       { key: 'debtorName', label: 'Debtor Name' },
-      { key: 'accountNo', label: 'Account Number', align: 'c' },
       { key: 'amt', label: 'Amount', render: function (r, i) { return inputs[i]; } },
       { key: 'x', label: '', render: function (r, i) {
         const edit = h('button', { class: 'btn small', type: 'button' }, 'Edit');
