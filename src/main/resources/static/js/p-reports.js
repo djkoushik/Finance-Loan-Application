@@ -13,6 +13,7 @@ function mcol(key, label, total) { return { key: key, label: label, align: 'r', 
 
 function reportPage(cfg) {
   route(cfg.path, cfg.title, function (main) {
+    const title = pageName(cfg.path, cfg.title);
     const f = {};
     const row = h('div', { class: 'row' });
     if (cfg.date) { f.date = h('input', { type: 'date', value: fmt.today() }); row.appendChild(field('Date', f.date, { required: true })); }
@@ -63,7 +64,7 @@ function reportPage(cfg) {
         params = read();
         rows = await GET(cfg.endpoint, params);
         clear(out);
-        out.appendChild(h('h2', { class: 'no-print', style: 'margin-top:0' }, cfg.title + (subtitle(params) ? ' - ' + subtitle(params) : '')));
+        out.appendChild(h('h2', { class: 'no-print', style: 'margin-top:0' }, title + (subtitle(params) ? ' - ' + subtitle(params) : '')));
         out.appendChild(dataTable(cfg.columns, rows, { empty: cfg.empty || 'No records found for the selected criteria' }));
         tools.classList.toggle('hidden', !rows.length);
       });
@@ -73,7 +74,7 @@ function reportPage(cfg) {
         busy(btn, async function () {
           if (!rows) throw new Error('Generate the report first');
           const spec = tableSpec(cfg.columns, rows);
-          spec.title = cfg.title;
+          spec.title = title;
           spec.subtitle = subtitle(params);
           await downloadExport(kind, spec);
         });

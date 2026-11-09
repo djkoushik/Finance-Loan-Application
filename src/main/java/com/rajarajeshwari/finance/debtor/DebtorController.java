@@ -61,7 +61,15 @@ public class DebtorController {
         Map<String, Object> out = new HashMap<String, Object>();
         out.put("areas", areas());
         out.put("notes", db.list("SELECT note_id, note FROM note_types ORDER BY note_id"));
-        out.put("genders", Arrays.asList(P.of("code", "M", "name", "Male"), P.of("code", "F", "name", "Female")));
+        // active ones fill the dropdown; allGenders (code -> name) also covers switched-off values still on old records
+        out.put("genders", db.list("SELECT internal_value AS code, display_value AS name FROM dropdown_values"
+                + " WHERE dropdown_key = 'gender' AND is_active ORDER BY display_value"));
+        Map<String, Object> names = new HashMap<String, Object>();
+        for (Map<String, Object> g : db.list("SELECT internal_value AS code, display_value AS name FROM dropdown_values"
+                + " WHERE dropdown_key = 'gender'")) {
+            names.put((String) g.get("code"), g.get("name"));
+        }
+        out.put("genderNames", names);
         return out;
     }
 
@@ -234,8 +242,9 @@ public class DebtorController {
         p.put("name", name);
         p.put("doj", P.date(b, "dateOfJoin", "Date of joining"));
         String gender = P.required(b, "gender", "Gender").toUpperCase(Locale.ROOT);
-        if (!"M".equals(gender) && !"F".equals(gender)) {
-            throw new ApiException(400, "Gender must be Male or Female");
+        if (db.count("SELECT count(*) FROM dropdown_values WHERE dropdown_key = 'gender' AND internal_value = :g",
+                P.of("g", gender)) == 0) {
+            throw new ApiException(400, "Gender is not a valid choice");
         }
         p.put("gender", gender);
         String email = P.str(b, "email");

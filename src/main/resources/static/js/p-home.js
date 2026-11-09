@@ -119,7 +119,7 @@ route('home', 'Home', async function (main) {
   }).catch(function (e) { chart.appendChild(h('div', { class: 'empty' }, 'Could not load the chart: ' + e.message)); });
 
   const link = function (path, label, text) {
-    return h('a', { class: 'card link-card', href: '#/' + path }, h('h2', null, label, h('span', { class: 'arrow', html: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' })), h('div', { class: 'txt' }, text));
+    return h('a', { class: 'card link-card', href: '#/' + path }, h('h2', null, pageName(path, label),h('span', { class: 'arrow', html: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' })), h('div', { class: 'txt' }, text));
   };
   main.appendChild(h('div', { class: 'grid' },
     link('payments', 'Daily Payments', 'Enter the amounts collected today, area by area.'),

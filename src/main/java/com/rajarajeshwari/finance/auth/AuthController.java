@@ -111,9 +111,10 @@ public class AuthController {
         return P.of("ok", true);
     }
 
-    private static Map<String, Object> describe(SessionUser u) {
+    private Map<String, Object> describe(SessionUser u) {
+        String roleDesc = db.scalar("SELECT role_desc FROM roles WHERE role_id = :r", P.of("r", u.getRoleId()), String.class);
         return P.of("userId", u.getUserId(), "username", u.getUsername(), "name", u.getDisplayName(),
-                "roleId", u.getRoleId(), "admin", u.isAdmin());
+                "roleId", u.getRoleId(), "roleDesc", roleDesc == null ? "" : roleDesc, "admin", u.isAdmin());
     }
 
     private static String str(Object o) {

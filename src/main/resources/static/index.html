@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -7,13 +7,13 @@
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
   <link rel="icon" type="image/x-icon" href="img/favicon.ico">
   <link rel="apple-touch-icon" href="img/app-icon.png">
-  <link rel="stylesheet" href="css/app.css?v=20261112">
+  <link rel="stylesheet" href="css/app.css?v=20261114">
 </head>
 <body>
   <div id="login" class="hidden">
     <form class="box" id="loginForm" autocomplete="off">
-      <img src="img/app-icon.png" alt="" class="login-logo">
-      <h1>SRI RAJA RAJESHWARI</h1>
+      <img src="/api/auth/icon" alt="" class="login-logo" id="loginLogo">
+      <h1 id="loginBrand">SRI RAJA RAJESHWARI</h1>
       <div class="sub">Finance management</div>
       <div class="field"><label for="lgUser">User Id</label><input type="text" id="lgUser" required autofocus></div>
       <div class="field"><label for="lgPass">Password</label><input type="password" id="lgPass" required></div>
@@ -26,7 +26,7 @@
   <div id="app" class="hidden">
     <header class="topbar">
       <button id="menuBtn" aria-label="Menu">&#9776;</button>
-      <img src="img/app-icon.png" alt="" class="brand-logo"><span class="brand">SRI RAJA RAJESHWARI</span>
+      <img src="/api/auth/icon" alt="" class="brand-logo" id="brandLogo"><span class="brand" id="brandName"></span>
       <span class="spacer"></span>
       <span class="who" id="whoAmI"></span>
       <button class="link" id="logoutBtn">Logout</button>
@@ -38,13 +38,14 @@
   </div>
   <div id="toasts"></div>
 
-  <script src="js/core.js?v=20261112"></script>
-  <script src="js/p-home.js?v=20261112"></script>
-  <script src="js/p-debtors.js?v=20261112"></script>
-  <script src="js/p-deposits.js?v=20261112"></script>
-  <script src="js/p-payments.js?v=20261112"></script>
-  <script src="js/p-reports.js?v=20261112"></script>
-  <script src="js/main.js?v=20261112"></script>
+  <script src="js/core.js?v=20261114"></script>
+  <script src="js/p-home.js?v=20261114"></script>
+  <script src="js/p-debtors.js?v=20261114"></script>
+  <script src="js/p-deposits.js?v=20261114"></script>
+  <script src="js/p-payments.js?v=20261114"></script>
+  <script src="js/p-reports.js?v=20261114"></script>
+  <script src="js/p-config.js?v=20261114"></script>
+  <script src="js/main.js?v=20261114"></script>
 </body>
 </html>
 

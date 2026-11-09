@@ -1,7 +1,7 @@
 'use strict';
 /* Core helpers: DOM builder, API client, formatting, dialogs, tables, tabs, exports. */
 
-const App = { user: null, lookups: null, routes: {}, current: null };
+const App = { user: null, lookups: null, config: null, routes: {}, current: null };
 
 /* ---------------------------------------------------------------- DOM */
 function h(tag, attrs) {
@@ -45,8 +45,17 @@ const fmt = {
     return d.toLocaleDateString('en-CA');
   },
   shortDate: function (s) { const p = String(s).slice(0, 10).split('-'); return p[2] + '-' + MONTHS[+p[1] - 1]; },
-  gender: function (g) { return g === 'M' ? 'Male' : g === 'F' ? 'Female' : g; }
+  gender: function (g) {
+    const names = App.lookups && App.lookups.genderNames;
+    return names && names[g] ? names[g] : g;
+  }
 };
+
+/** Page name as set in the Config Center; `dflt` is the built-in name used until one is set. */
+function pageName(path, dflt) {
+  const p = App.config && App.config.pages;
+  return p && p[path] ? p[path] : dflt;
+}
 
 /* ---------------------------------------------------------------- API */
 async function api(method, url, body) {

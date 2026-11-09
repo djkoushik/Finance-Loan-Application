@@ -11,6 +11,6 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new AuthInterceptor())
                 .addPathPatterns("/api/**", "/photos/**")
-                .excludePathPatterns("/api/auth/login", "/api/auth/roles", "/api/auth/me");
+                .excludePathPatterns("/api/auth/login", "/api/auth/roles", "/api/auth/me", "/api/auth/branding", "/api/auth/icon");
     }
 }

@@ -12,6 +12,7 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.rajarajeshwari.finance.config.ConfigService;
 import com.rajarajeshwari.finance.support.ApiException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,6 +35,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/export")
 public class ExportController {
+
+    private final ConfigService config;
+
+    public ExportController(ConfigService config) {
+        this.config = config;
+    }
 
     @PostMapping("/pdf")
     @SuppressWarnings("unchecked")
@@ -59,7 +66,7 @@ public class ExportController {
         Font cellFont = FontFactory.getFont(FontFactory.HELVETICA, 8);
         Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8);
 
-        Paragraph head = new Paragraph("SRI RAJA RAJESHWARI", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.GRAY));
+        Paragraph head = new Paragraph(config.appName(),FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, Color.GRAY));
         head.setAlignment(Element.ALIGN_CENTER);
         doc.add(head);
         Paragraph t = new Paragraph(title, titleFont);
