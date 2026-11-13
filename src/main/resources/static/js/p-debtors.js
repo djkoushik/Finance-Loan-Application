@@ -11,14 +11,13 @@ route('debtors', 'Add/Update Debtor', function (main) {
 
   async function showList() {
     clear(area);
-    const q = h('input', { type: 'text', placeholder: 'Search name, code or cell' });
+    const q = h('input', { type: 'text', placeholder: 'Search name or cell' });
     const areaSel = areaSelect(true);
     const results = h('div');
     const load = async function () {
       const rows = await GET('/api/debtors', { q: q.value, area: areaSel.value });
       clear(results).appendChild(dataTable([
-        { key: 'debtorCode', label: 'Debtor Code', render: function (r) { return h('a', { href: '#', onclick: function (e) { e.preventDefault(); showForm(r.debtorCode); } }, r.debtorCode); } },
-        { key: 'debtorName', label: 'Debtor Name' },
+        { key: 'debtorName', label: 'Debtor Name', render: function (r) { return h('a', { href: '#', onclick: function (e) { e.preventDefault(); showForm(r.debtorCode); } }, r.debtorName); } },
         { key: 'phone', label: 'Cell' },
         { key: 'street', label: 'Area' },
         { key: 'dateOfJoin', label: 'Date of Joining', fmt: fmt.date },
@@ -42,7 +41,7 @@ route('debtors', 'Add/Update Debtor', function (main) {
   }
 
   async function remove(r) {
-    const reason = await askReason('Delete debtor', 'Delete ' + r.debtorName + ' (' + r.debtorCode + ')? Enter the reason.');
+    const reason = await askReason('Delete debtor', 'Delete ' + r.debtorName + '? Enter the reason.');
     if (!reason) return;
     try {
       await DEL('/api/debtors/' + encodeURIComponent(r.debtorCode), { reason: reason });
@@ -107,7 +106,7 @@ route('debtors', 'Add/Update Debtor', function (main) {
         await App.refreshLookups();
         if (editing) { ok('Your record has been updated successfully'); showList(); }
         else {
-          ok('Debtor ' + saved.debtorCode + ' added successfully');
+          ok('Debtor ' + (saved.debtorName || '') + ' added successfully');
           const more = await confirmBox('Debtor added', 'Do you want to add more debtors?', 'Yes, add another');
           if (more) showForm(null); else showList();
         }
@@ -116,11 +115,10 @@ route('debtors', 'Add/Update Debtor', function (main) {
 
     area.appendChild(h('div', { class: 'card' },
       datalist,
-      h('h2', { style: 'margin-top:0' }, editing ? 'Edit debtor ' + code : 'Add debtor'),
+      h('h2', { style: 'margin-top:0' }, editing ? 'Edit debtor' : 'Add debtor'),
       h('div', { class: 'row', style: 'align-items:flex-start' },
         h('div', { style: 'flex:1;min-width:280px' },
           h('div', { class: 'grid' },
-            field('Debtor code', h('input', { type: 'text', value: editing ? code : nextCode, readonly: true })),
             field('Debtor name', f.debtorName, { required: true }),
             field('Date of joining', f.dateOfJoin, { required: true }),
             field('Gender', f.gender, { required: true }),
@@ -161,7 +159,6 @@ route('area-seq', 'Area Visiting Order', function (main) {
       if (!rows.length) { out.appendChild(h('div', { class: 'empty' }, 'No debtors in this area')); return; }
       clear(out).appendChild(dataTable([
         { key: '#', label: 'S.No', align: 'c' },
-        { key: 'debtorCode', label: 'Debtor Code' },
         { key: 'debtorName', label: 'Debtor Name' },
         { key: 'dateOfJoin', label: 'Date of Joining', fmt: fmt.date },
         { key: 'phone', label: 'Cell' }

@@ -17,7 +17,6 @@ route('deposits', 'Deposits (Advances)', function (main) {
       clear(results).appendChild(h('div', { class: 'total-line' }, rows.length + ' account(s)'));
       results.appendChild(dataTable([
         { key: 'debtorName', label: 'Debtor Name' },
-        { key: 'debtorCode', label: 'Code' },
         { key: 'street', label: 'Area' },
         { key: 'amountOfAdvance', label: 'Amount of Advance', align: 'r', fmt: fmt.money, total: true },
         { key: 'paid', label: 'Paid', align: 'r', fmt: fmt.money, total: true },
@@ -70,7 +69,7 @@ route('deposits', 'Deposits (Advances)', function (main) {
     const debtorSel = editing
       ? h('input', { type: 'text', readonly: true, value: d.debtorName })
       : select([{ value: '', label: '- Select debtor -' }].concat(debtors.map(function (x) {
-        return { value: x.debtorCode, label: x.debtorName + ' (' + x.debtorCode + ')' + (running[x.debtorCode] ? ' - running account' : '') };
+        return { value: x.debtorCode, label: x.debtorName + (running[x.debtorCode] ? ' - running account' : '') };
       })), '');
     if (!editing) {
       Array.prototype.forEach.call(debtorSel.options, function (o) { if (running[o.value]) o.disabled = true; });
@@ -113,7 +112,6 @@ route('deposits', 'Deposits (Advances)', function (main) {
       h('h2', { style: 'margin-top:0' }, editing ? 'Update deposit (A/C ' + accNo + ')' : 'Add deposit'),
       h('div', { class: 'grid' },
         field('Debtor name', debtorSel, { required: true }),
-        field('Debtor code', code),
         field('A/C No', h('input', { type: 'text', readonly: true, value: accNo })),
         field('Amount of advance', amount, { required: true }),
         field('No. of days', days),
@@ -136,7 +134,6 @@ route('closing', 'Account Closing', function (main) {
   async function load() {
     const rows = await GET('/api/accounts/closable');
     clear(out).appendChild(dataTable([
-      { key: 'debtorCode', label: 'Debtor Code' },
       { key: 'debtorName', label: 'Debtor Name' },
       { key: 'amountOfAdvance', label: 'Amount of Advance', align: 'r', fmt: fmt.money, total: true },
       { key: 'paid', label: 'Paid Amount', align: 'r', fmt: fmt.money, total: true },

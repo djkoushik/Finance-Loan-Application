@@ -447,3 +447,5 @@ a.link-card .txt { color: var(--muted); }
 /* keep row action buttons side by side */
 table.data td:last-child .btn.small { margin: 0; }
 table.data td:last-child:has(.btn.small) { white-space: nowrap; width: 1%; }
+
+.btn.update, .btn.update:hover { background: #1e8e4a; border-color: #1e8e4a; color: #fff; }

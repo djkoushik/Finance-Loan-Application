@@ -4,7 +4,6 @@
 const money = { align: 'r', fmt: fmt.money };
 const COL = {
   no: { key: '#', label: 'S.No', align: 'c' },
-  code: { key: 'debtorCode', label: 'Debtor Code' },
   name: { key: 'debtorName', label: 'Debtor Name' },
   area: { key: 'street', label: 'Area' },
   advDate: { key: 'dateOfAdvance', label: 'Date of Advance', fmt: fmt.date }
@@ -148,7 +147,7 @@ route('r-loans', 'Loans Statements', function (main) {
       body.appendChild(h('tr', null,
         h('td', null, h('div', { class: 'ls-person' },
           h('span', { class: 'ls-avatar' }, initials(r.debtorName)),
-          h('span', null, h('span', { class: 'ls-pname' }, r.debtorName), h('span', { class: 'ls-pcode' }, r.debtorCode)))),
+          h('span', null, h('span', { class: 'ls-pname' }, r.debtorName)))),
         h('td', null, r.street ? h('span', { class: 'ls-chip' }, r.street) : ''),
         h('td', { class: 'r ls-amt' }, rupee(r.amountOfAdvance)),
         h('td', { class: 'r' }, fmt.money(r.dayOfPayment)),
@@ -255,7 +254,7 @@ route('r-loans', 'Loans Statements', function (main) {
 
 reportPage({
   path: 'r-paid-day', title: 'Paid Amount on a Date', endpoint: '/api/reports/paid-on-date', date: true, area: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, { key: 'dayDate', label: 'Date', fmt: fmt.date }, mcol('amount', 'Paid Amount', true)]
+  columns: [COL.no, COL.name, COL.area, { key: 'dayDate', label: 'Date', fmt: fmt.date }, mcol('amount', 'Paid Amount', true)]
 });
 reportPage({
   path: 'r-pay-rec', title: 'Payments & Receipts', endpoint: '/api/reports/payments-receipts', range: true, area: true,
@@ -264,19 +263,19 @@ reportPage({
 });
 reportPage({
   path: 'r-days', title: 'No. of Days of Accounts', endpoint: '/api/reports/days', date: true, area: true, order: true, orderByArea: true,
-  columns: [COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true), mcol('paid', 'Paid Amount', true),
+  columns: [COL.no, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true), mcol('paid', 'Paid Amount', true),
     mcol('due', 'Due Amount', true), { key: 'noOfDays', label: 'No. of Days', align: 'c' }]
 });
 reportPage({
-  path: 'r-month-due', title: 'Month-wise Due List', endpoint: '/api/reports/month-due', range: true, order: true,
-  columns: [COL.no, COL.code, COL.name, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
+  path: 'r-month-due', title: 'Month-wise Due List', endpoint: '/api/reports/month-due', range: true,
+  columns: [COL.no, COL.name, COL.advDate, mcol('amountOfAdvance', 'Amount of Advance', true),
     mcol('paidBefore', 'Paid before period', true), mcol('paidInPeriod', 'Paid in period', true), mcol('paidTotal', 'Paid total', true), mcol('due', 'Due', true)]
 });
 /* ---------------------------------------------------------------- ledger */
 route('r-ledger', 'Daily Payment Ledger', async function (main) {
   const debtors = await GET('/api/debtors');
   const debtorSel = select([{ value: '', label: '- Select debtor -' }].concat(debtors.map(function (d) {
-    return { value: d.debtorCode, label: d.debtorName + ' (' + d.debtorCode + ')' };
+    return { value: d.debtorCode, label: d.debtorName };
   })), '');
   const accSel = select([{ value: '', label: '- Select account -' }], '');
   let status = 'ALL';
@@ -305,7 +304,7 @@ route('r-ledger', 'Daily Payment Ledger', async function (main) {
     current = res;
     const kv = function (k, v) { return h('div', null, h('span', { style: 'color:#667585' }, k + ': '), h('strong', null, v)); };
     out.appendChild(h('div', { class: 'card' }, h('div', { class: 'grid' },
-      kv('Debtor', a.debtorName + ' (' + a.debtorCode + ')'), kv('Cell', a.phone), kv('Guarantor', a.guarantorName || '-'),
+      kv('Debtor', a.debtorName), kv('Cell', a.phone), kv('Guarantor', a.guarantorName || '-'),
       kv('A/C No', a.accountNo), kv('Amount of advance', fmt.money(a.amountOfAdvance)), kv('Day of payment', fmt.money(a.dayOfPayment)),
       kv('Date of advance', fmt.date(a.dateOfAdvance)), kv('Closing date', fmt.date(a.closingDate)),
       kv('Status', a.accountStatus === 'OPEN' ? 'Running' : 'Closed'))));
@@ -320,7 +319,7 @@ route('r-ledger', 'Daily Payment Ledger', async function (main) {
         const spec = tableSpec(ledgerCols, current.rows);
         const a = current.account;
         spec.title = 'Daily Payment Ledger';
-        spec.subtitle = a.debtorName + ' (' + a.debtorCode + ')  A/C ' + a.accountNo + '  Advance ' + fmt.money(a.amountOfAdvance) + ' on ' + fmt.date(a.dateOfAdvance);
+        spec.subtitle = a.debtorName + '  A/C ' + a.accountNo + '  Advance ' + fmt.money(a.amountOfAdvance) + ' on ' + fmt.date(a.dateOfAdvance);
         await downloadExport(kind, spec);
       });
     };
@@ -381,7 +380,7 @@ route('r-closed', 'Closed Accounts', function (main) {
         return b;
       }
     },
-    COL.no, COL.code, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
+    COL.no, COL.name, COL.area, COL.advDate, mcol('amountOfAdvance', 'Amount', true),
     { key: 'closedDate', label: 'Closed Date', fmt: fmt.date }, { key: 'noOfDays', label: 'No. of Days', align: 'c' }
   ];
   const exportCols = columns.filter(function (c) { return c.key; });

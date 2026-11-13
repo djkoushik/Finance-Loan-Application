@@ -80,6 +80,11 @@ public class PaymentController {
         List<Map<String, Object>> rows = db.list(sql, p);
         Map<String, Object> out = new HashMap<String, Object>();
         out.put("rows", rows);
+        // already collected on this date: for the selected area (area wise) or for every area (order by name)
+        Long collected = db.scalar("SELECT COALESCE(SUM(pm.amount),0) FROM payments pm"
+                + " JOIN debtors d ON d.debtor_code = pm.debtor_code AND d.is_active"
+                + " WHERE pm.is_active AND pm.day_date = CAST(:date AS date) " + Ctx.scopeSql("d") + where, p, Long.class);
+        out.put("collectedToday", collected == null ? 0L : collected);
         return out;
     }
 

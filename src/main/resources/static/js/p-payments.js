@@ -46,14 +46,19 @@ route('payments', 'Daily Payments', function (main) {
 
 function renderEntry(pane) {
   const result = h('div');
+  const collectedAmt = h('b', null, '0');
+  const collectedBar = h('div', { class: 'collected-today no-print', style: 'text-align:right;margin:4px 0;font-size:15px' },
+    'Collected Today: ', collectedAmt);
   const filters = paymentFilters(load);
   pane.appendChild(filters.node);
+  pane.appendChild(collectedBar);
   pane.appendChild(result);
 
   async function load() {
     const p = filters.params();
     const res = await GET('/api/payments/entry', p);
     const rows = res.rows;
+    collectedAmt.textContent = fmt.money(res.collectedToday || 0);
     clear(result);
     if (!rows.length) { result.appendChild(h('div', { class: 'empty' }, 'No running accounts for the selected date')); return; }
 
@@ -83,7 +88,6 @@ function renderEntry(pane) {
     const d = p.date;
     const cols = [
       { key: '#', label: 'S.No', align: 'c' },
-      { key: 'debtorCode', label: 'Debtor Code' },
       { key: 'debtorName', label: 'Debtor Name' },
       { key: 'phone', label: 'Phone' },
       { key: 'dateOfAdvance', label: 'Date of Advance', fmt: fmt.date },
@@ -156,11 +160,16 @@ function renderEdit(pane) {
     recompute();
     result.appendChild(dataTable([
       { key: '#', label: 'S.No', align: 'c' },
-      { key: 'debtorCode', label: 'Debtor Code' },
       { key: 'debtorName', label: 'Debtor Name' },
       { key: 'amt', label: 'Amount', render: function (r, i) { return inputs[i]; } },
       { key: 'x', label: '', render: function (r, i) {
         const edit = h('button', { class: 'btn small', type: 'button' }, 'Edit');
+        // typed a new amount but not saved yet: the button turns green and reads "Update"
+        inputs[i].addEventListener('input', function () {
+          const changed = String(inputs[i].value) !== String(r.amount);
+          edit.textContent = changed ? 'Update' : 'Edit';
+          edit.classList.toggle('update', changed);
+        });
         edit.addEventListener('click', function () {
           busy(edit, async function () {
             await PUT('/api/payments/' + r.paymentId, { amount: inputs[i].value });
