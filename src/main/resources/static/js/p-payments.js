@@ -61,7 +61,6 @@ function renderEntry(pane) {
       const closedAcc = Number(r.due) <= 0;
       const inp = h('input', {
         type: 'number', class: 'amt', min: 0, max: r.due, step: 1, disabled: closedAcc,
-        placeholder: closedAcc ? '' : String(Math.min(r.dayOfPayment, r.due)),
         value: r.todayAmount === null ? '' : r.todayAmount
       });
       return inp;
@@ -93,8 +92,8 @@ function renderEntry(pane) {
       { key: 'before3', label: fmt.shortDate(fmt.addDays(d, -3)), align: 'r', fmt: fmt.money },
       { key: 'before2', label: fmt.shortDate(fmt.addDays(d, -2)), align: 'r', fmt: fmt.money },
       { key: 'before1', label: fmt.shortDate(fmt.addDays(d, -1)), align: 'r', fmt: fmt.money },
-      { key: 'due', label: 'Due', align: 'r', fmt: fmt.money },
-      { key: 'amt', label: 'Amount', noExport: true, render: function (r, i) { return inputs[i]; } }
+      { key: 'amt', label: 'Amount', noExport: true, render: function (r, i) { return inputs[i]; } },
+      { key: 'due', label: 'Due', align: 'r', fmt: fmt.money }
     ];
     result.appendChild(h('div', { class: 'legend' },
       h('span', { class: 'red' }, 'Red: fully paid, or amount equals due (ready to close)'), h('span', { class: 'green' }, 'Green: advance given on this date')));

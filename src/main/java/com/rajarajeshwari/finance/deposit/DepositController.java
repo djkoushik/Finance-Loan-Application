@@ -73,7 +73,7 @@ public class DepositController {
             sql.append(" AND dp.debtor_code = :dc");
             p.put("dc", debtorCode.trim());
         }
-        sql.append(" ORDER BY dp.account_no");
+        sql.append(" ORDER BY LOWER(d.debtor_name), dp.account_no");
         return db.list(sql.toString(), p);
     }
 

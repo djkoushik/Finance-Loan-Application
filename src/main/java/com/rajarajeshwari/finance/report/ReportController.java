@@ -37,7 +37,7 @@ public class ReportController {
     }
 
     private static String order(String order) {
-        return "account".equals(order) ? " ORDER BY t.account_no" : " ORDER BY t.debtor_name, t.account_no";
+        return "account".equals(order) ? " ORDER BY t.account_no" : " ORDER BY LOWER(t.debtor_name), t.account_no";
     }
 
     private static void checkRange(LocalDate from, LocalDate to) {
@@ -57,7 +57,7 @@ public class ReportController {
                 + " FROM deposits dp JOIN debtors d ON d.debtor_code = dp.debtor_code AND d.is_active"
                 + " LEFT JOIN note_types nt ON nt.note_id = dp.note"
                 + " WHERE dp.is_active AND dp.date_of_advance = :date " + Ctx.scopeSql("d") + areaClause(area, p)
-                + " ORDER BY d.street, d.seq NULLS LAST, dp.account_no";
+                + " ORDER BY LOWER(d.debtor_name), dp.account_no";
         return db.list(sql, p);
     }
 
@@ -109,7 +109,7 @@ public class ReportController {
         return db.list("SELECT p.debtor_code, d.debtor_name, d.street, p.account_no, p.day_date, p.amount"
                 + " FROM payments p JOIN debtors d ON d.debtor_code = p.debtor_code AND d.is_active"
                 + " WHERE p.is_active AND p.day_date = :date " + Ctx.scopeSql("d") + areaClause(area, p)
-                + " ORDER BY d.street, d.seq NULLS LAST, p.account_no", p);
+                + " ORDER BY LOWER(d.debtor_name), p.account_no", p);
     }
 
     /** Per-day comparison of money lent out (payments) and money collected (receipts). */
@@ -148,7 +148,7 @@ public class ReportController {
                 + "   ON pa.debtor_code = dp.debtor_code AND pa.account_no = dp.account_no"
                 + " WHERE dp.is_active AND dp.account_status = 'OPEN' AND dp.date_of_advance <= :date "
                 + Ctx.scopeSql("d") + areaClause(area, p) + ") t"
-                + ("area".equals(order) ? " ORDER BY t.street, t.debtor_name, t.account_no" : order(order)), p);
+                + ("area".equals(order) ? " ORDER BY LOWER(t.debtor_name), t.account_no" : order(order)), p);
     }
 
     /** Collections within a period against what was outstanding. */
@@ -213,7 +213,7 @@ public class ReportController {
                 + "   WHERE is_active GROUP BY debtor_code, account_no) pa"
                 + "   ON pa.debtor_code = dp.debtor_code AND pa.account_no = dp.account_no"
                 + " WHERE dp.is_active AND pa.paid >= dp.amount_of_advance " + Ctx.scopeSql("d") + areaClause(area, p) + ") t"
-                + " WHERE t.closed_date BETWEEN :from AND :to ORDER BY t.closed_date, t.account_no", p);
+                + " WHERE t.closed_date BETWEEN :from AND :to ORDER BY LOWER(t.debtor_name), t.account_no", p);
     }
 
     /** Accounts fully repaid whose last payment falls in the period. */
@@ -294,23 +294,23 @@ public class ReportController {
         String join = " JOIN debtors d ON d.debtor_code = ";
         if ("debtors".equals(type)) {
             return db.list("SELECT d.debtor_code, d.debtor_name, d.street FROM debtors d WHERE d.is_active " + s
-                    + " ORDER BY d.debtor_name, d.debtor_code", p);
+                    + " ORDER BY LOWER(d.debtor_name), d.debtor_code", p);
         } else if ("open".equals(type)) {
             return db.list("SELECT d.debtor_code, d.debtor_name, d.street, dp.account_no, dp.amount_of_advance AS amount"
                     + " FROM deposits dp" + join + "dp.debtor_code AND d.is_active"
                     + " WHERE dp.is_active AND dp.account_status = 'OPEN' " + s
-                    + " ORDER BY d.debtor_name, dp.account_no", p);
+                    + " ORDER BY LOWER(d.debtor_name), dp.account_no", p);
         } else if ("collected".equals(type)) {
             return db.list("SELECT d.debtor_code, d.debtor_name, d.street, pm.account_no, SUM(pm.amount) AS amount"
                     + " FROM payments pm" + join + "pm.debtor_code AND d.is_active"
                     + " WHERE pm.is_active AND pm.day_date = :today " + s
                     + " GROUP BY d.debtor_code, d.debtor_name, d.street, pm.account_no"
-                    + " ORDER BY d.debtor_name, pm.account_no", p);
+                    + " ORDER BY LOWER(d.debtor_name), pm.account_no", p);
         } else if ("advanced".equals(type)) {
             return db.list("SELECT d.debtor_code, d.debtor_name, d.street, dp.account_no, dp.amount_of_advance AS amount"
                     + " FROM deposits dp" + join + "dp.debtor_code AND d.is_active"
                     + " WHERE dp.is_active AND dp.date_of_advance = :today " + s
-                    + " ORDER BY d.debtor_name, dp.account_no", p);
+                    + " ORDER BY LOWER(d.debtor_name), dp.account_no", p);
         }
         throw new ApiException(400, "Unknown list type");
     }

@@ -37,12 +37,12 @@ public class PaymentController {
 
     private static String orderBy(String mode) {
         if ("name".equals(mode)) {
-            return " ORDER BY t.debtor_name, t.account_no";
+            return " ORDER BY LOWER(t.debtor_name), t.account_no";
         }
         if ("account".equals(mode)) {
             return " ORDER BY t.account_no";
         }
-        return " ORDER BY t.seq NULLS LAST, t.debtor_name, t.account_no";
+        return " ORDER BY LOWER(t.debtor_name), t.account_no";
     }
 
     // ------------------------------------------------------------------ entry sheet
@@ -223,7 +223,7 @@ public class PaymentController {
                 + " LEFT JOIN (SELECT debtor_code, account_no, SUM(amount) paid FROM payments WHERE is_active"
                 + "   GROUP BY debtor_code, account_no) pa ON pa.debtor_code = dp.debtor_code AND pa.account_no = dp.account_no"
                 + " WHERE dp.is_active AND dp.account_status = 'OPEN' AND COALESCE(pa.paid,0) >= dp.amount_of_advance "
-                + Ctx.scopeSql("d") + " ORDER BY dp.account_no", Ctx.withScope(new HashMap<String, Object>()));
+                + Ctx.scopeSql("d") + " ORDER BY LOWER(d.debtor_name), dp.account_no", Ctx.withScope(new HashMap<String, Object>()));
     }
 
     @PostMapping("/api/accounts/close")
